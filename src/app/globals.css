@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+/*
+ * Tokens visuais: instructions/DESIGN-GUIDELINES.md §3. ÚNICO lugar com hex no projeto.
+ * Mesmo padrão do site douglastertuliano.vercel.app: variáveis de papel em :root,
+ * expostas ao Tailwind por @theme inline.
+ */
+
+:root {
+  /* Tokens do site */
+  --paper: #f2f3f0;
+  --raised: #fafaf8;
+  --surface: #e6e8e3;
+  --line: #d2d5cf;
+  --ink: #121412;
+  --ink-muted: #4f544e;
+  --accent: #b83a12;
+  --accent-hover: #9c3010;
+  --accent-soft: #f4e1d8;
+  --on-accent: #fafaf8;
+  --inverse: #121412;
+  --on-inverse: #f2f3f0;
+  --on-inverse-muted: #a4aaa2;
+  --accent-on-inverse: #e2673a;
+
+  /* Tokens de estado (exclusivos desta ferramenta) */
+  --warn: #8a5a00;
+  --warn-soft: #f5ead2;
+  --ok: #2f6b3a;
+  --ok-soft: #dfeadf;
+  --violet-soft: #e6e1f0;
+
+  /* Bordas das pills: o fundo "soft" escurecido 8% (DESIGN-GUIDELINES §3, Status → pill) */
+  --warn-soft-edge: color-mix(in oklab, var(--warn-soft), #000 8%);
+  --accent-soft-edge: color-mix(in oklab, var(--accent-soft), #000 8%);
+  --violet-soft-edge: color-mix(in oklab, var(--violet-soft), #000 8%);
+  --ok-soft-edge: color-mix(in oklab, var(--ok-soft), #000 8%);
+
+  /* Borda de kbd dentro de botão escuro: branco 35% (DESIGN-GUIDELINES §5, Kbd) */
+  --kbd-on-dark-edge: rgb(255 255 255 / 0.35);
+
+  --focus-ring: var(--accent);
+  --header-height: 4rem;
+}
+
+/* Superfícies escuras trocam a cor do anel de foco, como no site. */
+[data-surface="inverse"] {
+  --focus-ring: var(--on-inverse);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-raised: var(--raised);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-inverse: var(--inverse);
+  --color-on-inverse: var(--on-inverse);
+  --color-on-inverse-muted: var(--on-inverse-muted);
+  --color-accent-on-inverse: var(--accent-on-inverse);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-violet-soft: var(--violet-soft);
+  --color-warn-soft-edge: var(--warn-soft-edge);
+  --color-accent-soft-edge: var(--accent-soft-edge);
+  --color-violet-soft-edge: var(--violet-soft-edge);
+  --color-ok-soft-edge: var(--ok-soft-edge);
+  --color-kbd-on-dark-edge: var(--kbd-on-dark-edge);
+  --color-focus-ring: var(--focus-ring);
+
+  --font-sans: var(--font-schibsted-grotesk), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* Cantos quase retos (DESIGN-GUIDELINES §2.5): 2px chips/inputs/pills, 4px botões. */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+
+  /* Layout em duas colunas a partir de 860px (DESIGN-GUIDELINES §6): variante `desk:`. */
+  --breakpoint-desk: 860px;
+
+  --container-content: 80rem;
+  --spacing-header: var(--header-height);
+}
+
+/* Escala tipográfica da ferramenta (DESIGN-GUIDELINES §4). Usa var(--tw-*) como o site,
+   para que leading-*, tracking-* e font-* continuem podendo sobrescrever. */
+@utility text-display {
+  font-size: 28px;
+  line-height: var(--tw-leading, 1.15);
+  letter-spacing: var(--tw-tracking, -0.01em);
+  font-weight: var(--tw-font-weight, 700);
+}
+@utility text-title {
+  font-size: 18px;
+  line-height: var(--tw-leading, 1.3);
+  font-weight: var(--tw-font-weight, 700);
+}
+@utility text-body {
+  font-size: 15px;
+  line-height: var(--tw-leading, 1.45);
+}
+@utility text-body-strong {
+  font-size: 15px;
+  line-height: var(--tw-leading, 1.45);
+  font-weight: var(--tw-font-weight, 600);
+}
+@utility text-small {
+  font-size: 13px;
+  line-height: var(--tw-leading, 1.45);
+}
+@utility text-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: var(--tw-leading, 1.4);
+  letter-spacing: var(--tw-tracking, 0.02em);
+}
+@utility text-micro {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: var(--tw-leading, 1.4);
+}
+
+/* Ênfase do site: sublinhado accent. No máximo uma vez por tela (DESIGN-GUIDELINES §4). */
+@utility emphasis {
+  text-decoration-line: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 0.09em;
+  text-underline-offset: 0.12em;
+  text-decoration-skip-ink: none;
+  font-style: normal;
+}
+
+@layer base {
+  html {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+}
