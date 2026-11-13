@@ -10,9 +10,9 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "check:sheet": "tsx scripts/check-sheet.ts",
-    "migrate": "tsx scripts/migrate.ts",
-    "import": "tsx scripts/import.ts"
+    "check:sheet": "tsx --env-file-if-exists=.env.local scripts/check-sheet.ts",
+    "migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.ts",
+    "import": "tsx --env-file-if-exists=.env.local scripts/import.ts"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
