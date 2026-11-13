@@ -1,5 +1,13 @@
-import { naoImplementadoResponse } from '@/lib/http';
+import { NextResponse } from 'next/server';
+import { SESSION_COOKIE } from '@/lib/auth/session';
 
 export function POST(): Response {
-  return naoImplementadoResponse(4);
+  const response = new NextResponse(null, { status: 204 });
+  response.cookies.set(SESSION_COOKIE, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  });
+  return response;
 }
