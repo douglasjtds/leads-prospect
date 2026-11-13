@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fazerLead } from './__fixtures__/lead';
 import { mensagem, primeiraMensagem } from './messages';
-import { AcaoInvalida, aplicarAcao, proximaAcao, temContato } from './next-action';
+import { AcaoInvalida, aplicarAcao, aplicarPatch, proximaAcao, temContato } from './next-action';
 import { STATUS, type Status } from './types';
 
 const HOJE = '2026-11-13';
@@ -272,5 +272,29 @@ describe('pular e observações', () => {
 
   it('AcaoInvalida tem nome próprio', () => {
     expect(new AcaoInvalida('x').name).toBe('AcaoInvalida');
+  });
+});
+
+describe('aplicarPatch (atualização otimista)', () => {
+  const dia = '2026-11-13';
+
+  it('aplica os campos e concatena o histórico como o servidor', () => {
+    const lead = fazerLead({ historico: '10/11 1ª msg (curta)', status: 'Contatado', toques: 1, proxAcao: '2026-11-13' });
+    const novo = aplicarPatch(lead, aplicarAcao(lead, { tipo: 'enviei' }, dia), dia);
+    expect(novo).toMatchObject({ toques: 2, proxAcao: '2026-11-17', historico: '10/11 1ª msg (curta) · 13/11 follow-up dia 3' });
+    expect(novo).not.toHaveProperty('eventoHistorico');
+  });
+
+  it('proxAcao null limpa a data; sem evento mantém o histórico', () => {
+    const lead = fazerLead({ proxAcao: '2026-11-20', historico: 'x' });
+    const novo = aplicarPatch(lead, { proxAcao: null, observacoes: 'oi' }, dia);
+    expect(novo).toMatchObject({ proxAcao: null, observacoes: 'oi', historico: 'x' });
+  });
+
+  it('não altera o lead original', () => {
+    const lead = fazerLead();
+    aplicarPatch(lead, { status: 'Fechado', eventoHistorico: 'status → Fechado' }, dia);
+    expect(lead.status).toBe('A contatar');
+    expect(lead.historico).toBe('');
   });
 });

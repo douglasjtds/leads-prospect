@@ -1,4 +1,5 @@
 import { addDias } from './dates';
+import { concatHistorico } from './historico';
 import { mensagem, primeiraMensagem, varianteEfetiva } from './messages';
 import { celular } from './phone';
 import type { Acao, DataISO, Lead, Patch, ResultadoRevisao, Status } from './types';
@@ -215,4 +216,17 @@ export function aplicarAcao(lead: Lead, acao: Acao, hoje: DataISO): Patch {
     case 'salvarObs':
       return { observacoes: acao.texto };
   }
+}
+
+/**
+ * Aplica um patch ao lead em memória, do mesmo jeito que o servidor grava na planilha
+ * (histórico concatenado como "dd/MM evento"). Usado na atualização otimista do cliente.
+ */
+export function aplicarPatch(lead: Lead, patch: Patch, hoje: DataISO): Lead {
+  const { eventoHistorico, ...campos } = patch;
+  return {
+    ...lead,
+    ...campos,
+    historico: eventoHistorico === undefined ? lead.historico : concatHistorico(lead.historico, eventoHistorico, hoje),
+  };
 }

@@ -87,6 +87,17 @@
 
   --container-content: 80rem;
   --spacing-header: var(--header-height);
+  /* Barra de abas abaixo do header (Hoje, Todos, Números). */
+  --spacing-tabs: 2.75rem;
+
+  /* Toast entra com fade e 8px de deslocamento (DESIGN-GUIDELINES §8). */
+  --animate-toast-in: toast-in 150ms ease-out;
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
 }
 
 /* Escala tipográfica da ferramenta (DESIGN-GUIDELINES §4). Usa var(--tw-*) como o site,

@@ -26,3 +26,13 @@ export function addDias(data: DataISO, dias: number): DataISO {
 export function fmtDiaMes(data: DataISO): string {
   return `${data.slice(8, 10)}/${data.slice(5, 7)}`;
 }
+
+/**
+ * Prazo da Próx. ação para a linha da lista (DESIGN-GUIDELINES §5, item da lista):
+ * "venceu dd/MM", "vence hoje", "volta dd/MM" ou null quando não há data.
+ */
+export function rotuloPrazo(proxAcao: DataISO | null, hoje: DataISO): string | null {
+  if (proxAcao === null) return null;
+  if (proxAcao === hoje) return 'vence hoje';
+  return proxAcao < hoje ? `venceu ${fmtDiaMes(proxAcao)}` : `volta ${fmtDiaMes(proxAcao)}`;
+}

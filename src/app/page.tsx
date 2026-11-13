@@ -1,7 +1,6 @@
+import { AppShell } from '@/components/app-shell';
+
+// Shell do app (Hoje / Todos / Números). Os dados vêm do cliente via GET /api/leads.
 export default function Home() {
-  return (
-    <main className="p-8 font-mono text-sm">
-      <p>leads-prospect: scaffold da fase 0.</p>
-    </main>
-  );
+  return <AppShell />;
 }

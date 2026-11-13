@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDias, fmtDiaMes, hoje } from './dates';
+import { addDias, fmtDiaMes, hoje, rotuloPrazo } from './dates';
 
 const TZ = 'America/Sao_Paulo';
 
@@ -33,4 +33,12 @@ describe('fmtDiaMes', () => {
   it('yyyy-MM-dd → dd/MM', () => {
     expect(fmtDiaMes('2026-03-07')).toBe('07/03');
   });
+});
+
+describe('rotuloPrazo', () => {
+  const dia = '2026-11-13';
+  it('sem data não mostra nada', () => expect(rotuloPrazo(null, dia)).toBeNull());
+  it('hoje', () => expect(rotuloPrazo(dia, dia)).toBe('vence hoje'));
+  it('no passado', () => expect(rotuloPrazo('2026-11-10', dia)).toBe('venceu 10/11'));
+  it('no futuro', () => expect(rotuloPrazo('2026-11-16', dia)).toBe('volta 16/11'));
 });
