@@ -117,6 +117,26 @@ export async function listLeads(): Promise<Lead[]> {
   return leads;
 }
 
+/** Lê o estado atual de um lead pelo Place ID (uma chamada). Usado pelo PATCH antes de aplicar a ação. */
+export async function getLead(placeId: string): Promise<Lead> {
+  const { mapa, linhas } = await lerAba();
+  exigirColunas(mapa);
+  const iPlace = indiceColuna(mapa, COLUNAS.placeId);
+  const achados: Lead[] = [];
+  linhas.forEach((linha, i) => {
+    if (linhaTemEmpresa(linha, mapa) && String(linha[iPlace] ?? '').trim() === placeId) {
+      achados.push(linhaParaLead(linha, mapa, i + 2));
+    }
+  });
+  if (achados.length === 0) throw new LeadNaoEncontrado(placeId);
+  if (achados.length > 1) {
+    throw new ConflitoPlanilha(
+      `Place ID "${placeId}" aparece em ${achados.length} linhas (${achados.map((l) => l.linha).join(', ')}). Corrija na planilha.`,
+    );
+  }
+  return achados[0]!;
+}
+
 // ---------- Escrita ----------
 
 let mapaEmCache: MapaCabecalho | undefined;

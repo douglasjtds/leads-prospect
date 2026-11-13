@@ -47,7 +47,7 @@ vi.mock('./client', () => ({
   }),
 }));
 
-const { listLeads, updateLead, LeadNaoEncontrado, ConflitoPlanilha } = await import('./leads-repo');
+const { listLeads, getLead, updateLead, LeadNaoEncontrado, ConflitoPlanilha } = await import('./leads-repo');
 
 // Cabeçalho com colunas legadas e fora da ordem da spec, como a planilha real.
 const CABECALHO = ['Prioridade', 'Enviar 1ª msg', ...COLUNAS_OBRIGATORIAS.filter((c) => c !== 'Prioridade')];
@@ -74,6 +74,22 @@ describe('listLeads', () => {
       ['Clínica A', 2],
       ['Pet B', 4],
     ]);
+  });
+});
+
+describe('getLead', () => {
+  it('devolve o lead atual pelo Place ID', async () => {
+    const lead = await getLead('ID-B');
+    expect(lead).toMatchObject({ empresa: 'Pet B', status: 'Contatado', toques: 1, linha: 4 });
+  });
+
+  it('lança LeadNaoEncontrado para Place ID inexistente', async () => {
+    await expect(getLead('ID-Z')).rejects.toBeInstanceOf(LeadNaoEncontrado);
+  });
+
+  it('lança ConflitoPlanilha quando o Place ID está repetido', async () => {
+    planilha.grade[2] = linha({ Empresa: 'Cópia', 'Place ID': 'ID-A' });
+    await expect(getLead('ID-A')).rejects.toBeInstanceOf(ConflitoPlanilha);
   });
 });
 
