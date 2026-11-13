@@ -11,6 +11,7 @@ import {
   type Status,
   type Variante,
 } from '@/lib/domain/types';
+import { fmtDiaMes } from '@/lib/domain/dates';
 
 // Contrato com a planilha: nomes de coluna e conversões de tipo. Puro, sem rede.
 // Fonte: instructions/PRODUCT-SPEC.md §4 e instructions/ARCHITECTURE.md §4.
@@ -150,10 +151,8 @@ export function celulaParaData(celula: Celula): DataISO | null {
   return null;
 }
 
-/** yyyy-MM-dd → dd/MM. */
-export function diaMes(data: DataISO): string {
-  return `${data.slice(8, 10)}/${data.slice(5, 7)}`;
-}
+/** yyyy-MM-dd → dd/MM. Alias de fmtDiaMes (lib/domain/dates). */
+export const diaMes = fmtDiaMes;
 
 // ---------- Histórico ("dd/MM evento" separados por " · ") ----------
 
