@@ -5,13 +5,14 @@ import { mostrarErro, mostrarToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
 import { WhatsAppIcon } from '@/components/ui/whatsapp-icon';
+import { useCelular } from '@/hooks/use-celular';
 import { useAbrirEm, useVariante } from '@/hooks/use-pref';
 import { useShortcuts } from '@/hooks/use-shortcuts';
 import { copiar } from '@/lib/clipboard';
 import { primeiraMensagem, varianteEfetiva } from '@/lib/domain/messages';
 import { MOTIVOS_PULAR, proximaAcao } from '@/lib/domain/next-action';
 import { VARIANTES, type Acao, type Lead, type ResultadoRevisao, type Variante } from '@/lib/domain/types';
-import { ABRIR_EM, urlChat, urlDm, type AbrirEm } from '@/lib/whatsapp';
+import { ABRIR_EM, abrirEmEfetivo, urlChat, urlDm, type AbrirEm } from '@/lib/whatsapp';
 import { CLASSE_TEXTAREA } from './bloco';
 
 // Bloco "próxima ação" (PRODUCT-SPEC §7.5 e §5.2/§5.3, ARCHITECTURE §8).
@@ -42,17 +43,20 @@ function abrirDm(url: string): void {
 export function NextAction({ lead, concluir }: NextActionProps) {
   const prox = proximaAcao(lead);
   const [variante, setVariante] = useVariante();
-  const [abrirEm, setAbrirEm] = useAbrirEm();
+  const [preferencia, setPreferencia] = useAbrirEm();
+  const celular = useCelular();
+  const abrirEm = abrirEmEfetivo(preferencia, celular);
   const chat = urlChat(lead.telefone, abrirEm);
   const dm = urlDm(lead);
 
   const ehPrimeira = prox.tipo === 'primeira';
   const texto = ehPrimeira ? primeiraMensagem(lead, variante) : prox.texto;
 
-  const seletorAbrir = chat ? (
+  // No celular não há escolha: o WhatsApp Web não abre conversa lá.
+  const seletorAbrir = chat && !celular ? (
     <div className="flex items-center gap-2">
       <span className="text-label text-ink-muted">abrir no</span>
-      <Segmented label="Abrir o chat no" options={ABRIR_EM} value={abrirEm} onChange={setAbrirEm} />
+      <Segmented label="Abrir o chat no" options={ABRIR_EM} value={preferencia} onChange={setPreferencia} />
     </div>
   ) : null;
 
@@ -74,6 +78,7 @@ export function NextAction({ lead, concluir }: NextActionProps) {
           chat={chat}
           dm={dm}
           abrirEm={abrirEm}
+          celular={celular}
           concluir={concluir}
           seletorAbrir={seletorAbrir}
         />
@@ -94,6 +99,8 @@ interface ComTextoProps {
   chat: string | null;
   dm: string | null;
   abrirEm: AbrirEm;
+  /** No celular não existe Ctrl+V: o toast fala só em colar. */
+  celular: boolean;
   concluir: (acao: Acao) => void;
   seletorAbrir: ReactNode;
 }
@@ -107,6 +114,7 @@ function ComTexto({
   chat,
   dm,
   abrirEm,
+  celular,
   concluir,
   seletorAbrir,
 }: ComTextoProps) {
@@ -119,10 +127,10 @@ function ComTexto({
     }
     if (chat) {
       abrirChat(chat, abrirEm);
-      mostrarToast('Mensagem copiada: cole com Ctrl+V');
+      mostrarToast(celular ? 'Mensagem copiada: cole no chat' : 'Mensagem copiada: cole com Ctrl+V');
     } else {
       if (dm) abrirDm(dm);
-      mostrarToast('Mensagem copiada: cole na DM com Ctrl+V');
+      mostrarToast(celular ? 'Mensagem copiada: cole na DM' : 'Mensagem copiada: cole na DM com Ctrl+V');
     }
   }
 
