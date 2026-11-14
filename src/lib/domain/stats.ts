@@ -62,3 +62,8 @@ export function testeAB(leads: readonly Lead[]): ResultadoVariante[] {
     };
   });
 }
+
+/** Parte sobre total, de 0 a 100. Total zero devolve null: não há o que medir. */
+export function percentual(parte: number, total: number): number | null {
+  return total === 0 ? null : (parte / total) * 100;
+}

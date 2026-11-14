@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fazerLead } from './__fixtures__/lead';
-import { funil, resumo, testeAB } from './stats';
+import { funil, percentual, resumo, testeAB } from './stats';
 import { STATUS } from './types';
 
 const leads = [
@@ -54,5 +54,16 @@ describe('testeAB', () => {
       { variante: 'curta', enviadas: 3, comQualquerResposta: 2, comRespostaHumana: 1 },
       { variante: 'completa', enviadas: 3, comQualquerResposta: 2, comRespostaHumana: 2 },
     ]);
+  });
+});
+
+describe('percentual', () => {
+  it('calcula de 0 a 100', () => {
+    expect(percentual(1, 4)).toBe(25);
+    expect(percentual(0, 3)).toBe(0);
+  });
+
+  it('total zero devolve null', () => {
+    expect(percentual(0, 0)).toBeNull();
   });
 });

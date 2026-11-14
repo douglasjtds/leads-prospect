@@ -5,6 +5,7 @@ import { flushSync } from 'react-dom';
 import { Header } from '@/components/header';
 import { LeadList, LeadListSkeleton, type GrupoLista } from '@/components/lead-list';
 import { Search } from '@/components/search';
+import { Stats } from '@/components/stats';
 import { Tabs, idAba, idPainel, type Aba } from '@/components/tabs';
 import { Toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,7 @@ const POR_PAGINA = 60;
 
 export function AppShell() {
   const { leads, hoje, carregando, erro, recarregar, aplicar } = useLeads();
-  const [meta] = useMeta();
+  const [meta, setMeta] = useMeta();
   const desktop = useDesktop();
 
   const [aba, setAba] = useState<Aba>('hoje');
@@ -141,6 +142,25 @@ export function AppShell() {
     return <LeadList grupos={grupos} hoje={hoje} selecionadoId={selecionadoId} onSelect={selecionar} />;
   }
 
+  /** Erro com "Tentar de novo" ou skeleton, enquanto ainda não há leads. */
+  function estadoCarga() {
+    return erro ? (
+      <div role="alert" className="border-t border-line px-5 py-6">
+        <p className="text-body">Erro: {erro}</p>
+        <Button variant="secondary" className="mt-4" onClick={() => void recarregar()} disabled={carregando}>
+          {carregando ? 'Carregando' : 'Tentar de novo'}
+        </Button>
+      </div>
+    ) : (
+      <div className="border-t border-line">
+        <p className="sr-only" role="status">
+          Carregando leads
+        </p>
+        <LeadListSkeleton />
+      </div>
+    );
+  }
+
   function conteudoLista() {
     if (buscando) {
       const n = resultados.length;
@@ -164,21 +184,7 @@ export function AppShell() {
       return (
         <>
           <Kicker className="px-5 pt-5 pb-3">{kicker}</Kicker>
-          {erro ? (
-            <div role="alert" className="border-t border-line px-5 py-6">
-              <p className="text-body">Erro: {erro}</p>
-              <Button variant="secondary" className="mt-4" onClick={() => void recarregar()} disabled={carregando}>
-                {carregando ? 'Carregando' : 'Tentar de novo'}
-              </Button>
-            </div>
-          ) : (
-            <div className="border-t border-line">
-              <p className="sr-only" role="status">
-                Carregando leads
-              </p>
-              <LeadListSkeleton />
-            </div>
-          )}
+          {estadoCarga()}
         </>
       );
     }
@@ -269,9 +275,15 @@ export function AppShell() {
         </nav>
 
         {aba === 'numeros' && !buscando ? (
-          <main {...painelLista} className="mx-auto max-w-content px-5 py-6">
-            <Kicker>03 / números</Kicker>
-            <p className="mt-3 text-body text-ink-muted">Funil e teste A/B entram na próxima etapa.</p>
+          <main {...painelLista} className="mx-auto max-w-content px-5 pt-6 pb-24">
+            {leads.length === 0 && (carregando || erro) ? (
+              <>
+                <Kicker className="pb-3">03 / números</Kicker>
+                <div className="-mx-5">{estadoCarga()}</div>
+              </>
+            ) : (
+              <Stats leads={leads} meta={meta} onMeta={setMeta} />
+            )}
           </main>
         ) : (
           <main
