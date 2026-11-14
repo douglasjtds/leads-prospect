@@ -8,6 +8,21 @@ export const ABRIR_EM = ['whatsapp web', 'app'] as const;
 export type AbrirEm = (typeof ABRIR_EM)[number];
 
 const RE_URL = /^https?:\/\//i;
+const RE_CELULAR = /Android|iPhone|iPad|iPod|Mobile/i;
+
+/**
+ * Celular ou tablet, pelo user agent. O iPad em modo desktop se diz "Macintosh",
+ * mas tem toque (maxTouchPoints > 1), coisa que o Mac não tem.
+ */
+export function ehCelular(userAgent: string, maxTouchPoints: number): boolean {
+  if (RE_CELULAR.test(userAgent)) return true;
+  return /Macintosh/i.test(userAgent) && maxTouchPoints > 1;
+}
+
+/** No celular o WhatsApp Web não abre conversa: sempre o app. No desktop, vale a preferência. */
+export function abrirEmEfetivo(preferencia: AbrirEm, celular: boolean): AbrirEm {
+  return celular ? 'app' : preferencia;
+}
 
 /** URL do chat do número, ou null se o telefone não for celular. */
 export function urlChat(telefone: string, onde: AbrirEm): string | null {

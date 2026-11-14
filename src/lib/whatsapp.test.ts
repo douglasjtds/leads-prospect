@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { urlChat, urlDm, urlMaps } from './whatsapp';
+import { abrirEmEfetivo, ehCelular, urlChat, urlDm, urlMaps } from './whatsapp';
 
 describe('urlChat', () => {
   it('web e app, só dígitos e sem texto na URL', () => {
@@ -32,5 +32,43 @@ describe('urlDm', () => {
 
   it('null sem URL', () => {
     expect(urlDm({ urlAtual: '', linkAtual: '@perfil' })).toBeNull();
+  });
+});
+
+describe('ehCelular', () => {
+  const IPHONE_BRAVE =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
+  const ANDROID =
+    'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36';
+  const MAC =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15';
+  const WINDOWS =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+
+  it('iPhone e Android são celular', () => {
+    expect(ehCelular(IPHONE_BRAVE, 5)).toBe(true);
+    expect(ehCelular(ANDROID, 5)).toBe(true);
+  });
+
+  it('iPad em modo desktop (Macintosh com toque) é celular', () => {
+    expect(ehCelular(MAC, 5)).toBe(true);
+  });
+
+  it('Mac e Windows sem toque não são', () => {
+    expect(ehCelular(MAC, 0)).toBe(false);
+    expect(ehCelular(WINDOWS, 0)).toBe(false);
+  });
+
+  it('notebook Windows com toque continua desktop', () => {
+    expect(ehCelular(WINDOWS, 10)).toBe(false);
+  });
+});
+
+describe('abrirEmEfetivo', () => {
+  it('no celular sempre app; no desktop, a preferência', () => {
+    expect(abrirEmEfetivo('whatsapp web', true)).toBe('app');
+    expect(abrirEmEfetivo('app', true)).toBe('app');
+    expect(abrirEmEfetivo('whatsapp web', false)).toBe('whatsapp web');
+    expect(abrirEmEfetivo('app', false)).toBe('app');
   });
 });

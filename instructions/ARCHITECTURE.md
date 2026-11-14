@@ -187,6 +187,8 @@ Um usuário, uma senha.
   - Web: `https://web.whatsapp.com/send?phone=55...`, numa janela nomeada `whatsapp` para
     reaproveitar a mesma aba.
   - App: `whatsapp://send?phone=55...`.
+  - No celular (user agent, ou iPad com toque), sempre app: o WhatsApp Web não abre conversa
+    lá. O seletor web/app fica oculto e a preferência salva continua valendo no desktop.
 - A preferência web/app fica em `localStorage`, dentro de `try/catch`.
 
 ## 9. Testes
