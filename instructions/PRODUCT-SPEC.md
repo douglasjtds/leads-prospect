@@ -139,7 +139,7 @@ depois não foi registrado (são os cerca de 30 primeiros). Quatro botões:
 ## 6. Mensagens (copy exata)
 
 Regras: sem travessão; nunca escrever "encontrei a {empresa}" (erra o gênero com profissionais
-homens), usar "vocês"; nota com vírgula decimal (`5,0`). O texto aparece numa caixa editável
+homens), usar "encontrei vocês" e citar o nome só como "pra {empresa}", sem artigo; nota com vírgula decimal (`5,0`). O texto aparece numa caixa editável
 antes de copiar.
 
 **Nicho no plural:** Clínica de estética → clínicas de estética, Dentista → dentistas, Psicólogo →
@@ -149,9 +149,12 @@ contabilidade, Personal trainer → personal trainers, Marcenaria → marcenaria
 
 ### `primeira` · variante curta (padrão)
 
-`{prova}`:
-- se Avaliações ≥ 5 e houver Nota: `Vi o perfil de vocês no Google: {N} avaliações com nota {nota}, parabéns!`
-- senão: `Vi o perfil de vocês no Google pesquisando {nicho no plural} em {cidade}.`
+`{prova}`, sempre citando a pesquisa:
+- se Avaliações ≥ 5 e houver Nota: `Estava pesquisando {nicho no plural} em {cidade} no Google e encontrei vocês: {N} avaliações com nota {nota}, parabéns!`
+- senão: `Estava pesquisando {nicho no plural} em {cidade} no Google e encontrei vocês.`
+
+`{empresa}` é o nome do lead como está na planilha, sempre depois de "pra" e sem artigo. Se o
+nome estiver vazio, usa `vocês`.
 
 Sem site, ou rede social, ou link na bio:
 ```
@@ -159,7 +162,7 @@ Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
 
 {prova} {observação}
 
-Posso te mostrar como ficaria uma página pra vocês?
+Posso te mostrar como ficaria uma página pra {empresa}?
 ```
 `{observação}`: `Reparei que vocês ainda não têm site no perfil.` (Sem site) ou
 `Reparei que o botão "Site" de vocês leva {destino}.`, com destino `pro Instagram`,
@@ -171,7 +174,7 @@ Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
 
 {prova} Dei uma olhada na página de vocês e tenho 2 ou 3 ideias pra ela trazer mais clientes.
 
-Posso te mandar?
+Posso te mandar o que pensei pra {empresa}?
 ```
 
 ### `primeira` · variante completa
