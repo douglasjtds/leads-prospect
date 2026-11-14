@@ -99,11 +99,17 @@ export function formatarNota(nota: number): string {
 }
 
 function prova(lead: Lead): string {
+  const pesquisa = `Estava pesquisando ${nichoPlural(lead.nicho)} em ${lead.cidade} no Google e encontrei vocês`;
   if (lead.avaliacoes !== null && lead.avaliacoes >= 5 && lead.nota !== null) {
     const n = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(lead.avaliacoes);
-    return `Vi o perfil de vocês no Google: ${n} avaliações com nota ${formatarNota(lead.nota)}, parabéns!`;
+    return `${pesquisa}: ${n} avaliações com nota ${formatarNota(lead.nota)}, parabéns!`;
   }
-  return `Vi o perfil de vocês no Google pesquisando ${nichoPlural(lead.nicho)} em ${lead.cidade}.`;
+  return `${pesquisa}.`;
+}
+
+/** Nome do cliente no fecho. Sempre "pra {empresa}", sem artigo (não erra o gênero). Sem nome: "vocês". */
+function destinatario(lead: Lead): string {
+  return lead.empresa.trim() || 'vocês';
 }
 
 const DESTINOS: Partial<Record<Situacao, string>> = {
@@ -126,13 +132,17 @@ function primeiraCurta(lead: Lead): string {
       '',
       `${prova(lead)} Dei uma olhada na página de vocês e tenho 2 ou 3 ideias pra ela trazer mais clientes.`,
       '',
-      'Posso te mandar?',
+      `Posso te mandar o que pensei pra ${destinatario(lead)}?`,
     ].join('\n');
   }
   const obs = observacao(lead.situacao);
-  return [ABERTURA, '', obs ? `${prova(lead)} ${obs}` : prova(lead), '', 'Posso te mostrar como ficaria uma página pra vocês?'].join(
-    '\n',
-  );
+  return [
+    ABERTURA,
+    '',
+    obs ? `${prova(lead)} ${obs}` : prova(lead),
+    '',
+    `Posso te mostrar como ficaria uma página pra ${destinatario(lead)}?`,
+  ].join('\n');
 }
 
 /** A variante que de fato sai: "completa" sem a coluna Mensagem (texto) cai para "curta". */

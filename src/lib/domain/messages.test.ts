@@ -47,89 +47,117 @@ describe('nota', () => {
 });
 
 describe('primeira · curta', () => {
+  const camila = { empresa: 'Dra. Camila Branco Cirurgiã Dentista' };
+
   it('Sem site, com 5+ avaliações', () => {
-    expect(primeiraMensagem(fazerLead({ situacao: 'Sem site', nota: 5, avaliacoes: 1234 }), 'curta')).toMatchInlineSnapshot(`
-      "Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
-
-      Vi o perfil de vocês no Google: 1.234 avaliações com nota 5,0, parabéns! Reparei que vocês ainda não têm site no perfil.
-
-      Posso te mostrar como ficaria uma página pra vocês?"
-    `);
-  });
-
-  it('Instagram no lugar do site, com menos de 5 avaliações (prova pelo nicho)', () => {
     expect(
-      primeiraMensagem(fazerLead({ situacao: 'Instagram no lugar do site', nicho: 'Pet shop', avaliacoes: 4 }), 'curta'),
+      primeiraMensagem(fazerLead({ ...camila, situacao: 'Sem site', cidade: 'Araçatuba', nota: 5, avaliacoes: 1234 }), 'curta'),
     ).toMatchInlineSnapshot(`
       "Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
 
-      Vi o perfil de vocês no Google pesquisando pet shops em Presidente Prudente. Reparei que o botão "Site" de vocês leva pro Instagram.
+      Estava pesquisando dentistas em Araçatuba no Google e encontrei vocês: 1.234 avaliações com nota 5,0, parabéns! Reparei que vocês ainda não têm site no perfil.
 
-      Posso te mostrar como ficaria uma página pra vocês?"
+      Posso te mostrar como ficaria uma página pra Dra. Camila Branco Cirurgiã Dentista?"
+    `);
+  });
+
+  it('Instagram no lugar do site, com menos de 5 avaliações (sem os números)', () => {
+    expect(
+      primeiraMensagem(
+        fazerLead({ empresa: 'Pet Feliz', situacao: 'Instagram no lugar do site', nicho: 'Pet shop', avaliacoes: 4 }),
+        'curta',
+      ),
+    ).toMatchInlineSnapshot(`
+      "Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
+
+      Estava pesquisando pet shops em Presidente Prudente no Google e encontrei vocês. Reparei que o botão "Site" de vocês leva pro Instagram.
+
+      Posso te mostrar como ficaria uma página pra Pet Feliz?"
     `);
   });
 
   it('Facebook no lugar do site, sem nota', () => {
     expect(
-      primeiraMensagem(fazerLead({ situacao: 'Facebook no lugar do site', nota: null, avaliacoes: 40 }), 'curta'),
+      primeiraMensagem(fazerLead({ ...camila, situacao: 'Facebook no lugar do site', nota: null, avaliacoes: 40 }), 'curta'),
     ).toMatchInlineSnapshot(`
       "Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
 
-      Vi o perfil de vocês no Google pesquisando dentistas em Presidente Prudente. Reparei que o botão "Site" de vocês leva pro Facebook.
+      Estava pesquisando dentistas em Presidente Prudente no Google e encontrei vocês. Reparei que o botão "Site" de vocês leva pro Facebook.
 
-      Posso te mostrar como ficaria uma página pra vocês?"
+      Posso te mostrar como ficaria uma página pra Dra. Camila Branco Cirurgiã Dentista?"
     `);
   });
 
   it('WhatsApp no lugar do site', () => {
-    expect(primeiraMensagem(fazerLead({ situacao: 'WhatsApp no lugar do site', nota: 4.9, avaliacoes: 12 }), 'curta')).toMatchInlineSnapshot(`
+    expect(
+      primeiraMensagem(fazerLead({ ...camila, situacao: 'WhatsApp no lugar do site', nota: 4.9, avaliacoes: 12 }), 'curta'),
+    ).toMatchInlineSnapshot(`
       "Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
 
-      Vi o perfil de vocês no Google: 12 avaliações com nota 4,9, parabéns! Reparei que o botão "Site" de vocês leva direto pro WhatsApp.
+      Estava pesquisando dentistas em Presidente Prudente no Google e encontrei vocês: 12 avaliações com nota 4,9, parabéns! Reparei que o botão "Site" de vocês leva direto pro WhatsApp.
 
-      Posso te mostrar como ficaria uma página pra vocês?"
+      Posso te mostrar como ficaria uma página pra Dra. Camila Branco Cirurgiã Dentista?"
     `);
   });
 
   it('Link na bio / plataforma', () => {
     expect(
-      primeiraMensagem(fazerLead({ situacao: 'Link na bio / plataforma', nicho: 'Psicólogo', cidade: 'Marília', avaliacoes: 0 }), 'curta'),
+      primeiraMensagem(
+        fazerLead({
+          empresa: 'Dr. João Lima Psicólogo',
+          situacao: 'Link na bio / plataforma',
+          nicho: 'Psicólogo',
+          cidade: 'Marília',
+          avaliacoes: 0,
+        }),
+        'curta',
+      ),
     ).toMatchInlineSnapshot(`
       "Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
 
-      Vi o perfil de vocês no Google pesquisando psicólogos em Marília. Reparei que o botão "Site" de vocês leva pra uma página de links.
+      Estava pesquisando psicólogos em Marília no Google e encontrei vocês. Reparei que o botão "Site" de vocês leva pra uma página de links.
 
-      Posso te mostrar como ficaria uma página pra vocês?"
+      Posso te mostrar como ficaria uma página pra Dr. João Lima Psicólogo?"
     `);
   });
 
   it('Site amador', () => {
     expect(
-      primeiraMensagem(fazerLead({ situacao: 'Site amador (construtor grátis)', nota: 4.7, avaliacoes: 88 }), 'curta'),
+      primeiraMensagem(fazerLead({ ...camila, situacao: 'Site amador (construtor grátis)', nota: 4.7, avaliacoes: 88 }), 'curta'),
     ).toMatchInlineSnapshot(`
       "Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
 
-      Vi o perfil de vocês no Google: 88 avaliações com nota 4,7, parabéns! Dei uma olhada na página de vocês e tenho 2 ou 3 ideias pra ela trazer mais clientes.
+      Estava pesquisando dentistas em Presidente Prudente no Google e encontrei vocês: 88 avaliações com nota 4,7, parabéns! Dei uma olhada na página de vocês e tenho 2 ou 3 ideias pra ela trazer mais clientes.
 
-      Posso te mandar?"
+      Posso te mandar o que pensei pra Dra. Camila Branco Cirurgiã Dentista?"
     `);
   });
 
   it('Situação vazia: sem a frase de observação', () => {
-    expect(primeiraMensagem(fazerLead({ situacao: null }), 'curta')).toMatchInlineSnapshot(`
+    expect(primeiraMensagem(fazerLead({ ...camila, situacao: null }), 'curta')).toMatchInlineSnapshot(`
       "Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.
 
-      Vi o perfil de vocês no Google: 32 avaliações com nota 4,8, parabéns!
+      Estava pesquisando dentistas em Presidente Prudente no Google e encontrei vocês: 32 avaliações com nota 4,8, parabéns!
 
-      Posso te mostrar como ficaria uma página pra vocês?"
+      Posso te mostrar como ficaria uma página pra Dra. Camila Branco Cirurgiã Dentista?"
     `);
   });
 
-  it('nunca escreve "encontrei a" e sempre fala com "vocês"', () => {
+  it('sem nome da empresa: o fecho volta para "vocês"', () => {
+    expect(primeiraMensagem(fazerLead({ empresa: '  ', situacao: 'Sem site' }), 'curta')).toContain(
+      'Posso te mostrar como ficaria uma página pra vocês?',
+    );
+    expect(primeiraMensagem(fazerLead({ empresa: '', situacao: 'Site amador (construtor grátis)' }), 'curta')).toContain(
+      'Posso te mandar o que pensei pra vocês?',
+    );
+  });
+
+  it('cita o nome sem artigo, nunca "encontrei a/o {empresa}", e sempre fala com "vocês"', () => {
     for (const situacao of SITUACOES) {
-      const texto = primeiraMensagem(fazerLead({ situacao }), 'curta');
-      expect(texto.toLowerCase()).not.toContain('encontrei');
-      expect(texto).toContain('vocês');
+      const texto = primeiraMensagem(fazerLead({ ...camila, situacao }), 'curta');
+      expect(texto).toContain('encontrei vocês');
+      expect(texto).toContain(`pra ${camila.empresa}?`);
+      expect(texto).not.toMatch(/\b(a|o|da|do) Dra\./);
     }
   });
 });
