@@ -13,6 +13,7 @@ import {
 } from '@/lib/domain/types';
 import { fmtDiaMes } from '@/lib/domain/dates';
 import { concatHistorico } from '@/lib/domain/historico';
+import type { LeadNovo } from '@/lib/domain/import';
 
 // Contrato com a planilha: nomes de coluna e conversões de tipo. Puro, sem rede.
 // Fonte: instructions/PRODUCT-SPEC.md §4 e instructions/ARCHITECTURE.md §4.
@@ -267,4 +268,38 @@ export function patchParaCelulas(patch: Patch, historicoAtual: string, hoje: Dat
     celulas.push({ coluna: COLUNAS.historico, valor: concatHistorico(historicoAtual, patch.eventoHistorico, hoje) });
   }
   return celulas;
+}
+
+// ---------- Lead novo → linha (importação) ----------
+
+/**
+ * Linha completa para anexar, na ordem do cabeçalho atual (ARCHITECTURE §4.4). Status nasce
+ * "A contatar" e Toques 0; colunas do app sem valor e colunas desconhecidas ficam vazias.
+ */
+export function leadNovoParaLinha(lead: LeadNovo, mapa: MapaCabecalho): Array<string | number> {
+  const valores: Partial<Record<NomeColuna, string | number>> = {
+    [COLUNAS.prioridade]: lead.prioridade ?? '',
+    [COLUNAS.nicho]: lead.nicho,
+    [COLUNAS.empresa]: lead.empresa,
+    [COLUNAS.cidade]: lead.cidade,
+    [COLUNAS.uf]: lead.uf,
+    [COLUNAS.telefone]: lead.telefone,
+    [COLUNAS.situacao]: lead.situacao,
+    [COLUNAS.linkAtual]: lead.linkAtual,
+    [COLUNAS.urlAtual]: lead.urlAtual,
+    [COLUNAS.nota]: lead.nota ?? '',
+    [COLUNAS.avaliacoes]: lead.avaliacoes ?? '',
+    [COLUNAS.googleMaps]: lead.googleMaps,
+    [COLUNAS.placeId]: lead.placeId,
+    [COLUNAS.status]: 'A contatar',
+    [COLUNAS.toques]: 0,
+    [COLUNAS.observacoes]: lead.observacoes,
+    [COLUNAS.mensagemTexto]: lead.mensagemTexto,
+  };
+  const largura = Math.max(-1, ...mapa.values()) + 1;
+  const linha: Array<string | number> = Array.from({ length: largura }, () => '');
+  for (const [nome, valor] of Object.entries(valores) as Array<[NomeColuna, string | number]>) {
+    linha[indiceColuna(mapa, nome)] = valor;
+  }
+  return linha;
 }

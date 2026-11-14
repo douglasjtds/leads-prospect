@@ -4,7 +4,7 @@ import { COLUNAS_OBRIGATORIAS, dataParaSerial, letraColuna } from './schema';
 
 // Planilha falsa em memória: entende os ranges que o repo usa ('Leads'!1:1, 'Leads'!M1:M,
 // 'Leads'!7:7, 'Leads'!C5, 'Leads'!A1:ZZ) e aplica values:batchUpdate na grade.
-const planilha = vi.hoisted(() => ({ grade: [] as Celula[][], escritas: [] as string[] }));
+const planilha = vi.hoisted(() => ({ grade: [] as Celula[][], escritas: [] as string[], anexadas: [] as Celula[][] }));
 
 function indiceDaLetra(letras: string): number {
   return [...letras].reduce((n, c) => n * 26 + (c.charCodeAt(0) - 64), 0) - 1;
@@ -35,7 +35,12 @@ vi.mock('./client', () => ({
     }
     throw new Error(`GET não suportado no teste: ${caminho}`);
   }),
-  sheetsPost: vi.fn(async (caminho: string, corpo: { data: Array<{ range: string; values: Celula[][] }> }) => {
+  sheetsPost: vi.fn(async (caminho: string, corpo: { data: Array<{ range: string; values: Celula[][] }>; values: Celula[][] }) => {
+    if (/^\/values\/[^?]+:append\?valueInputOption=RAW&insertDataOption=INSERT_ROWS$/.test(caminho)) {
+      planilha.grade.push(...corpo.values);
+      planilha.anexadas.push(...corpo.values);
+      return {};
+    }
     if (caminho !== '/values:batchUpdate') throw new Error(`POST não suportado no teste: ${caminho}`);
     for (const { range, values } of corpo.data) {
       const m = /!([A-Z]+)(\d+)$/.exec(range)!;
@@ -47,7 +52,7 @@ vi.mock('./client', () => ({
   }),
 }));
 
-const { listLeads, getLead, updateLead, LeadNaoEncontrado, ConflitoPlanilha } = await import('./leads-repo');
+const { listLeads, getLead, updateLead, importLeads, LeadNaoEncontrado, ConflitoPlanilha } = await import('./leads-repo');
 
 // Cabeçalho com colunas legadas e fora da ordem da spec, como a planilha real.
 const CABECALHO = ['Prioridade', 'Enviar 1ª msg', ...COLUNAS_OBRIGATORIAS.filter((c) => c !== 'Prioridade')];
@@ -59,6 +64,7 @@ function linha(valores: Record<string, Celula>): Celula[] {
 
 beforeEach(() => {
   planilha.escritas = [];
+  planilha.anexadas = [];
   planilha.grade = [
     CABECALHO,
     linha({ Empresa: 'Clínica A', 'Place ID': 'ID-A', Status: 'A contatar' }),
@@ -142,5 +148,58 @@ describe('updateLead', () => {
     planilha.grade[2] = linha({ Empresa: 'Cópia', 'Place ID': 'ID-A' });
     await expect(updateLead('ID-A', { toques: 1 }, '2026-11-13')).rejects.toBeInstanceOf(ConflitoPlanilha);
     expect(planilha.escritas).toEqual([]);
+  });
+});
+
+describe('importLeads', () => {
+  const nova = (over: Record<string, Celula> = {}) => ({
+    Prioridade: 'Média',
+    Nicho: 'Pet shop',
+    Empresa: 'Pet Novo',
+    Cidade: 'Assis',
+    UF: 'SP',
+    Telefone: '+55 18 99000-1111',
+    'Situação': 'Instagram no lugar do site',
+    'Link atual': 'https://instagram.com/petnovo',
+    'URL atual': 'https://instagram.com/petnovo',
+    Nota: 4.5,
+    'Avaliações': 20,
+    'Google Maps': 'https://www.google.com/maps/place/?q=place_id:ID-N',
+    'Place ID': 'ID-N',
+    'Enviar 1ª msg': 'coluna legada, não deve ser gravada',
+    ...over,
+  });
+
+  it('anexa só os novos, na ordem do cabeçalho, com Status A contatar e Toques 0', async () => {
+    const r = await importLeads([nova(), nova({ Empresa: 'Repetido', 'Place ID': 'ID-A' })], { dryRun: false });
+    expect(r.inseridos.map((l) => l.empresa)).toEqual(['Pet Novo']);
+    expect(r.duplicados).toEqual([{ empresa: 'Repetido', motivo: 'Place ID já existe na linha 2 (Clínica A)' }]);
+    expect(planilha.anexadas).toHaveLength(1);
+    const anexada = planilha.anexadas[0]!;
+    expect(anexada).toHaveLength(CABECALHO.length);
+    expect(anexada[CABECALHO.indexOf('Empresa')]).toBe('Pet Novo');
+    expect(anexada[CABECALHO.indexOf('Telefone')]).toBe('+55 18 99000-1111');
+    expect(anexada[CABECALHO.indexOf('Status')]).toBe('A contatar');
+    expect(anexada[CABECALHO.indexOf('Toques')]).toBe(0);
+    expect(anexada[CABECALHO.indexOf('Enviar 1ª msg')]).toBe('');
+    expect(anexada[CABECALHO.indexOf('Histórico')]).toBe('');
+
+    const lead = await getLead('ID-N');
+    expect(lead).toMatchObject({ empresa: 'Pet Novo', status: 'A contatar', toques: 0, nota: 4.5, situacao: 'Instagram no lugar do site' });
+  });
+
+  it('respeita o cabeçalho reordenado', async () => {
+    const invertido = [...CABECALHO].reverse();
+    planilha.grade = [invertido];
+    await importLeads([nova()], { dryRun: false });
+    expect(planilha.anexadas[0]![invertido.indexOf('Place ID')]).toBe('ID-N');
+    expect(planilha.anexadas[0]![invertido.indexOf('Empresa')]).toBe('Pet Novo');
+  });
+
+  it('em dry-run calcula o resultado sem gravar', async () => {
+    const r = await importLeads([nova(), nova({ Empresa: 'Sem situação', 'Place ID': 'ID-X', Telefone: '', 'Situação': '' })], { dryRun: true });
+    expect(r.inseridos).toHaveLength(1);
+    expect(r.ignorados).toEqual([{ empresa: 'Sem situação', motivo: 'Situação vazia.' }]);
+    expect(planilha.anexadas).toEqual([]);
   });
 });

@@ -1,3 +1,4 @@
+import { planejarImportacao, type Descartado, type LeadNovo, type LinhaBruta } from '@/lib/domain/import';
 import type { DataISO, Lead, Patch } from '@/lib/domain/types';
 import { STATUS } from '@/lib/domain/types';
 import { abaConfigurada, sheetsGet, sheetsPost } from './client';
@@ -8,6 +9,7 @@ import {
   exigirColunas,
   extrairPlaceId,
   indiceColuna,
+  leadNovoParaLinha,
   letraColuna,
   linhaParaLead,
   linhaTemEmpresa,
@@ -211,11 +213,34 @@ export async function updateLead(placeId: string, patch: Patch, hoje: DataISO): 
 
 // ---------- Importação (Fase 9) ----------
 
-export type NovaLinha = Record<string, string | number | null>;
+/** Anexa os leads no fim da aba, na ordem do cabeçalho atual. Devolve quantas linhas entraram. */
+export async function appendLeads(novos: readonly LeadNovo[]): Promise<number> {
+  if (novos.length === 0) return 0;
+  const aba = abaConfigurada();
+  const [cab] = await batchGet([rangeA1(aba, '1:1')]);
+  const mapa = mapaCabecalho(cab?.values?.[0] ?? []);
+  exigirColunas(mapa);
+  // RAW: "+55 18 99771-7770" fica como texto, sem virar fórmula ou número.
+  await sheetsPost(`/values/${enc(rangeA1(aba, 'A1'))}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    values: novos.map((lead) => leadNovoParaLinha(lead, mapa)),
+  });
+  return novos.length;
+}
 
-export async function appendLeads(linhas: readonly NovaLinha[]): Promise<number> {
-  void linhas;
-  throw new Error('não implementado (fase 9)');
+export interface ResultadoImportacao {
+  inseridos: LeadNovo[];
+  duplicados: Descartado[];
+  ignorados: Descartado[];
+}
+
+/**
+ * Normaliza o lote, descarta o que já existe (Place ID ou telefone, contra a planilha inteira e
+ * dentro do lote) e anexa o resto. Com `dryRun`, só calcula: nada é gravado.
+ */
+export async function importLeads(brutas: readonly LinhaBruta[], { dryRun }: { dryRun: boolean }): Promise<ResultadoImportacao> {
+  const plano = planejarImportacao(brutas, await listLeads());
+  if (!dryRun) await appendLeads(plano.novos);
+  return { inseridos: plano.novos, duplicados: plano.duplicados, ignorados: plano.ignorados };
 }
 
 // ---------- Diagnóstico (check:sheet) ----------
