@@ -2,11 +2,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE, verificarSessao } from '@/lib/auth/session';
 import { getEnv } from '@/lib/env';
 
-// Proxy (antigo middleware): exige sessão em tudo menos /login e /api/auth/* (ARCHITECTURE §6).
+// Proxy (antigo middleware): exige sessão em tudo menos /login, /api/auth/* e /robots.txt
+// (ARCHITECTURE §6). O robots.txt precisa ser público para os robôs lerem o "Disallow: /".
 // Os dados são telefones de terceiros: nada além do login responde sem sessão.
 
 function ehPublico(pathname: string): boolean {
-  return pathname === '/login' || pathname.startsWith('/api/auth/');
+  return (
+    pathname === '/login' || pathname === '/robots.txt' || pathname.startsWith('/api/auth/')
+  );
 }
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
