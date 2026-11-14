@@ -88,3 +88,25 @@ export function secoesHoje(
   ];
   return secoes.filter((s) => s.leads.length > 0);
 }
+
+/**
+ * Próximo lead da fila do Hoje depois de concluir `placeId` (PRODUCT-SPEC §7.5, "Enviei"):
+ * o item logo abaixo na mesma seção; se era o último, o primeiro da seção seguinte.
+ * Chame com as seções de ANTES da ação (o lead ainda está nelas). null se não estava no Hoje
+ * ou se não há mais nada abaixo.
+ */
+export function proximoNaFila(secoes: readonly SecaoHoje[], placeId: string): string | null {
+  for (let s = 0; s < secoes.length; s++) {
+    const leads = secoes[s]!.leads;
+    const i = leads.findIndex((l) => l.placeId === placeId);
+    if (i === -1) continue;
+    const abaixo = leads[i + 1];
+    if (abaixo) return abaixo.placeId;
+    for (let t = s + 1; t < secoes.length; t++) {
+      const primeiro = secoes[t]!.leads[0];
+      if (primeiro) return primeiro.placeId;
+    }
+    return null;
+  }
+  return null;
+}

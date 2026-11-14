@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useSyncExternalStore } from 'react';
+import { VARIANTES, type Variante } from '@/lib/domain/types';
+import { ABRIR_EM, type AbrirEm } from '@/lib/whatsapp';
 
 // Preferências do navegador (meta diária, abrir no web ou app, curta ou completa).
 // localStorage sempre em try/catch: pode estar bloqueado ou indisponível.
@@ -69,4 +71,22 @@ function parseMeta(bruto: string): number | null {
 /** Meta diária de novos envios (PRODUCT-SPEC §7.7), padrão 25. */
 export function useMeta(): [number, (valor: number) => void] {
   return usePref('lp:meta', META_PADRAO, parseMeta);
+}
+
+function parseVariante(bruto: string): Variante | null {
+  return (VARIANTES as readonly string[]).includes(bruto) ? (bruto as Variante) : null;
+}
+
+/** Versão da 1ª mensagem (PRODUCT-SPEC §7.5), padrão curta. */
+export function useVariante(): [Variante, (valor: Variante) => void] {
+  return usePref<Variante>('lp:variante', 'curta', parseVariante);
+}
+
+function parseAbrirEm(bruto: string): AbrirEm | null {
+  return (ABRIR_EM as readonly string[]).includes(bruto) ? (bruto as AbrirEm) : null;
+}
+
+/** Onde abrir o chat: WhatsApp Web ou app (ARCHITECTURE §8), padrão web. */
+export function useAbrirEm(): [AbrirEm, (valor: AbrirEm) => void] {
+  return usePref<AbrirEm>('lp:abrir', 'whatsapp web', parseAbrirEm);
 }

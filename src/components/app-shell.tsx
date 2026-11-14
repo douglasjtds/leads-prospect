@@ -10,7 +10,7 @@ import { Toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { Kicker } from '@/components/ui/kicker';
-import { Pill } from '@/components/ui/pill';
+import { LeadDetail } from '@/components/lead-detail/lead-detail';
 import { useDesktop } from '@/hooks/use-desktop';
 import { useLeads } from '@/hooks/use-leads';
 import { useMeta } from '@/hooks/use-pref';
@@ -18,14 +18,15 @@ import { useShortcuts } from '@/hooks/use-shortcuts';
 import { cx } from '@/lib/cx';
 import { buscar } from '@/lib/domain/search';
 import { funil } from '@/lib/domain/stats';
-import { contarEnviadosHoje, secoesHoje } from '@/lib/domain/today';
-import { STATUS, type Lead, type Status } from '@/lib/domain/types';
+import { contarEnviadosHoje, proximoNaFila, secoesHoje } from '@/lib/domain/today';
+import { STATUS, type Acao, type Status } from '@/lib/domain/types';
+import { vizinho } from '@/lib/nav';
 
 /** Paginação da aba Todos (PRODUCT-SPEC §7.6). */
 const POR_PAGINA = 60;
 
 export function AppShell() {
-  const { leads, hoje, carregando, erro, recarregar } = useLeads();
+  const { leads, hoje, carregando, erro, recarregar, aplicar } = useLeads();
   const [meta] = useMeta();
   const desktop = useDesktop();
 
@@ -39,6 +40,7 @@ export function AppShell() {
 
   const buscaRef = useRef<HTMLInputElement>(null);
   const rolagemLista = useRef(0);
+  const detalheRef = useRef<HTMLDivElement>(null);
 
   const buscando = termo.trim() !== '';
   const enviadosHoje = useMemo(() => (hoje ? contarEnviadosHoje(leads, hoje) : 0), [leads, hoje]);
@@ -50,6 +52,7 @@ export function AppShell() {
   const porStatus = useMemo(() => funil(leads), [leads]);
   const resultados = useMemo(() => (buscando ? buscar(leads, termo) : []), [leads, termo, buscando]);
   const filtrados = useMemo(() => (filtro ? leads.filter((l) => l.status === filtro) : leads), [leads, filtro]);
+  const visiveis = useMemo(() => filtrados.slice(0, limite), [filtrados, limite]);
 
   const primeiroHoje = secoes[0]?.leads[0]?.placeId ?? null;
   const selecionadoId = escolhido !== undefined ? escolhido : desktop ? primeiroHoje : null;
@@ -61,12 +64,51 @@ export function AppShell() {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   }
 
+  /** Ordem da lista na tela, para J/K. */
+  function ordemVisivel(): string[] {
+    if (buscando) return resultados.map((l) => l.placeId);
+    if (aba === 'hoje') return secoes.flatMap((s) => s.leads.map((l) => l.placeId));
+    if (aba === 'todos') return visiveis.map((l) => l.placeId);
+    return [];
+  }
+
+  /** Mostra o detalhe do topo e mantém o item visível na lista. */
+  function irPara(placeId: string) {
+    setEscolhido(placeId);
+    detalheRef.current?.scrollTo(0, 0);
+    if (!desktop && vista === 'detalhe') window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(`[data-place-id="${CSS.escape(placeId)}"]`)
+        ?.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  function andar(passo: 1 | -1) {
+    const proximo = vizinho(ordemVisivel(), selecionadoId, passo);
+    if (proximo) irPara(proximo);
+  }
+
+  const aplicarNoSelecionado = (acao: Acao) => {
+    if (selecionado) void aplicar(selecionado.placeId, acao);
+  };
+
+  /** Enviei, Pular e Revisar: aplica e segue para o item logo abaixo na mesma fila do Hoje. */
+  const concluir = (acao: Acao) => {
+    if (!selecionado) return;
+    const proximo = buscando ? null : proximoNaFila(secoes, selecionado.placeId);
+    void aplicar(selecionado.placeId, acao);
+    if (proximo) irPara(proximo);
+  };
+
   useShortcuts({
     '/': () => {
       buscaRef.current?.focus();
       buscaRef.current?.select();
     },
     Escape: limparBusca,
+    j: () => andar(1),
+    k: () => andar(-1),
   });
 
   function trocarAba(nova: Aba) {
@@ -164,7 +206,6 @@ export function AppShell() {
       );
     }
 
-    const visiveis = filtrados.slice(0, limite);
     return (
       <>
         <Kicker className="px-5 pt-5">{kicker}</Kicker>
@@ -249,8 +290,13 @@ export function AppShell() {
               {conteudoLista()}
             </div>
 
-            <div className={cx('desk:overflow-y-auto', !mostrandoDetalhe && 'hidden desk:block')}>
-              <DetalhePlaceholder lead={selecionado} onVoltar={voltarParaLista} />
+            <div ref={detalheRef} className={cx('desk:overflow-y-auto', !mostrandoDetalhe && 'hidden desk:block')}>
+              <LeadDetail
+                lead={selecionado}
+                aplicar={aplicarNoSelecionado}
+                concluir={concluir}
+                onVoltar={voltarParaLista}
+              />
             </div>
           </main>
         )}
@@ -258,31 +304,5 @@ export function AppShell() {
 
       <Toast />
     </>
-  );
-}
-
-/** O detalhe completo vem na Fase 7; por enquanto, só a identificação do lead escolhido. */
-function DetalhePlaceholder({ lead, onVoltar }: { lead: Lead | null; onVoltar: () => void }) {
-  if (!lead) {
-    return (
-      <div className="flex h-full min-h-60 items-center justify-center px-7 py-6">
-        <p className="text-small text-ink-muted">Escolha um lead na lista</p>
-      </div>
-    );
-  }
-  const kicker = [`linha ${lead.linha}`, lead.nicho, lead.prioridade ? `prioridade ${lead.prioridade}` : null]
-    .filter(Boolean)
-    .join(' / ');
-  return (
-    <article className="max-w-[760px] px-5 py-6 desk:px-7">
-      <Button variant="ghost" className="mb-6 desk:hidden" onClick={onVoltar}>
-        ← Lista
-      </Button>
-      <Kicker>{kicker}</Kicker>
-      <h1 className="mt-2 text-display">{lead.empresa}</h1>
-      <div className="mt-3">
-        <Pill status={lead.status} />
-      </div>
-    </article>
   );
 }

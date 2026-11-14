@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fazerLead } from './__fixtures__/lead';
-import { contarEnviadosHoje, secoesHoje } from './today';
+import { contarEnviadosHoje, proximoNaFila, secoesHoje } from './today';
 import type { Lead } from './types';
 
 const HOJE = '2026-11-13';
@@ -109,5 +109,30 @@ describe('contarEnviadosHoje', () => {
       fazerLead(),
     ];
     expect(contarEnviadosHoje(leads, HOJE)).toBe(2);
+  });
+});
+
+describe('proximoNaFila', () => {
+  const ids = (prefixo: string, n: number) => Array.from({ length: n }, (_, i) => fazerLead({ placeId: `${prefixo}${i}` }));
+  const secoes = [
+    { chave: 'responderam' as const, titulo: '', dica: '', leads: ids('r', 2) },
+    { chave: 'followups' as const, titulo: '', dica: '', leads: ids('f', 3) },
+    { chave: 'novos' as const, titulo: '', dica: '', leads: ids('n', 1) },
+  ];
+
+  it('devolve o item logo abaixo na mesma seção', () => {
+    expect(proximoNaFila(secoes, 'f0')).toBe('f1');
+    expect(proximoNaFila(secoes, 'r0')).toBe('r1');
+  });
+
+  it('no último da seção, vai para o primeiro da seção seguinte', () => {
+    expect(proximoNaFila(secoes, 'r1')).toBe('f0');
+    expect(proximoNaFila(secoes, 'f2')).toBe('n0');
+  });
+
+  it('null no fim do Hoje ou para lead fora do Hoje', () => {
+    expect(proximoNaFila(secoes, 'n0')).toBeNull();
+    expect(proximoNaFila(secoes, 'outro')).toBeNull();
+    expect(proximoNaFila([], 'r0')).toBeNull();
   });
 });
