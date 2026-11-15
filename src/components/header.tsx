@@ -12,9 +12,9 @@ export function Header({ busca, contador }: HeaderProps) {
   return (
     <header className="fixed inset-x-0 top-0 z-30 h-header border-b border-line bg-paper">
       <div className="mx-auto flex h-full max-w-content items-center gap-4 px-5 md:px-8 desk:gap-6">
-        <p className="shrink-0 font-semibold whitespace-nowrap">
+        <p className="shrink-0 font-bold tracking-[-0.02em] whitespace-nowrap">
           Douglas Tertuliano
-          <span className="hidden font-mono text-label font-normal text-ink-muted sm:inline"> / prospecção</span>
+          <span className="hidden font-mono text-label tracking-normal font-normal text-ink-muted sm:inline"> / prospecção</span>
         </p>
         <div className="min-w-0 flex-1 desk:max-w-[480px]">{busca}</div>
         {contador ? (
