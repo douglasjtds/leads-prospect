@@ -219,7 +219,7 @@ Aparecem para Resposta automática, Respondeu, Reunião marcada e Proposta envia
 
 | Rótulo | Texto |
 |---|---|
-| Quanto custa? | O plano essencial começa em R$ 400, tá explicado no site. Se quiser, te digo o que entraria no caso de vocês pra ficar mais claro. |
+| Quanto custa? | O plano essencial começa em R$ 500, tá explicado no site. Se quiser, te digo o que entraria no caso de vocês pra ficar mais claro. |
 | Já tenho Instagram | Faz sentido, e o Instagram continua sendo a vitrine. A página não substitui, ela complementa: no Instagram a pessoa precisa rolar o feed pra achar endereço, serviços e horários. Na página ela acha tudo em 5 segundos e clica no WhatsApp. |
 | Agora não | Tranquilo! Posso te chamar de novo em janeiro? Começo de ano é quando o pessoal costuma organizar essas coisas. |
 | Link do site | https://douglastertuliano.vercel.app/ |

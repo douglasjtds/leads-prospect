@@ -195,7 +195,7 @@ describe('demais mensagens', () => {
     [
       {
         "rotulo": "Quanto custa?",
-        "texto": "O plano essencial começa em R$ 400, tá explicado no site. Se quiser, te digo o que entraria no caso de vocês pra ficar mais claro.",
+        "texto": "O plano essencial começa em R$ 500, tá explicado no site. Se quiser, te digo o que entraria no caso de vocês pra ficar mais claro.",
       },
       {
         "rotulo": "Já tenho Instagram",
