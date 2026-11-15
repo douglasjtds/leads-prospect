@@ -32,6 +32,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   // Lista explícita de estáticos. Liberar "qualquer caminho com extensão" abriria
-  // /api/leads/x.png sem sessão.
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico$).*)'],
+  // /api/leads/x.png sem sessão. Os ícones (mesmos do site) ficam fora para a aba do /login.
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico$|icon\\.svg$|apple-icon\\.png$).*)'],
 };
