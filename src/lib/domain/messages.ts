@@ -47,6 +47,24 @@ export const MODELOS_PADRAO: Readonly<Record<ChaveModelo, string>> = {
   rrAgoraNao:
     'Tranquilo! Posso te chamar de novo em janeiro? Começo de ano é quando o pessoal costuma organizar essas coisas.',
   rrLink: URL_SITE,
+  despedidaPadrao: [
+    'Sem problema, obrigado por responder! Vou deixar aqui meu site com alguns exemplos de páginas que já fiz, caso queira dar uma olhada por curiosidade:',
+    URL_SITE,
+    '',
+    'Sem compromisso nenhum. Sucesso pra vocês! 💪',
+  ].join('\n'),
+  despedidaCurta: [
+    'Tranquilo, obrigado pelo retorno! Se um dia quiser ver como ficaria, deixo aqui alguns trabalhos meus:',
+    URL_SITE,
+    '',
+    'Sucesso!',
+  ].join('\n'),
+  despedidaAvaliacoes: [
+    'Entendo, obrigado por responder! Só deixo aqui meu site com exemplos de páginas, caso queira ver como ficaria uma pra {empresa}{avaliacoes}:',
+    URL_SITE,
+    '',
+    'Sem compromisso, qualquer coisa é só chamar. Abraço!',
+  ].join('\n'),
 };
 
 const RESPOSTAS_RAPIDAS: ReadonlyArray<{ chave: ChaveModelo; rotulo: string }> = [
@@ -62,7 +80,7 @@ export function modeloDe(chave: ChaveModelo, modelos: Modelos = {}): string {
   return salvo?.trim() ? salvo : MODELOS_PADRAO[chave];
 }
 
-const SEM_LEAD: ValoresVariaveis = { empresa: 'vocês', nicho: '', cidade: '', elogio: '.', observacao: '' };
+const SEM_LEAD: ValoresVariaveis = { empresa: 'vocês', nicho: '', cidade: '', elogio: '.', observacao: '', avaliacoes: '' };
 
 export function mensagem(chave: ChaveMensagem, lead: Lead | null = null, modelos: Modelos = {}): string {
   return renderizar(modeloDe(chave, modelos), lead ? valoresDoLead(lead) : SEM_LEAD);
@@ -114,13 +132,23 @@ export function formatarNota(nota: number): string {
   return nota.toFixed(1).replace('.', ',');
 }
 
+/** "{N} avaliações com nota {nota}" quando Avaliações ≥ 5 e há Nota; senão null. */
+function avaliacoesComNota(lead: Lead): string | null {
+  if (lead.avaliacoes === null || lead.avaliacoes < 5 || lead.nota === null) return null;
+  const n = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(lead.avaliacoes);
+  return `${n} avaliações com nota ${formatarNota(lead.nota)}`;
+}
+
 /** Fecho da frase da pesquisa: os números (5+ avaliações com nota) ou só o ponto. */
 function elogio(lead: Lead): string {
-  if (lead.avaliacoes !== null && lead.avaliacoes >= 5 && lead.nota !== null) {
-    const n = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(lead.avaliacoes);
-    return `: ${n} avaliações com nota ${formatarNota(lead.nota)}, parabéns!`;
-  }
-  return '.';
+  const avaliacoes = avaliacoesComNota(lead);
+  return avaliacoes ? `: ${avaliacoes}, parabéns!` : '.';
+}
+
+/** Trecho da despedida: " mostrando essas {N} avaliações com nota {nota}", ou vazio. */
+function trechoAvaliacoes(lead: Lead): string {
+  const avaliacoes = avaliacoesComNota(lead);
+  return avaliacoes ? ` mostrando essas ${avaliacoes}` : '';
 }
 
 const DESTINOS: Partial<Record<Situacao, string>> = {
@@ -147,6 +175,7 @@ export function valoresDoLead(lead: Lead): ValoresVariaveis {
     cidade: lead.cidade.trim(),
     elogio: elogio(lead),
     observacao: observacao(lead.situacao),
+    avaliacoes: trechoAvaliacoes(lead),
   };
 }
 
@@ -164,4 +193,24 @@ export function primeiraMensagem(lead: Lead, variante: Variante, modelos: Modelo
   return varianteEfetiva(lead, variante) === 'completa'
     ? lead.mensagemTexto.trim()
     : renderizar(modeloDe(chavePrimeira(lead), modelos), valoresDoLead(lead));
+}
+
+// ---------- Despedida (lead Sem interesse) ----------
+
+export const VERSOES_DESPEDIDA = ['padrão', 'curta', 'avaliações'] as const;
+export type VersaoDespedida = (typeof VERSOES_DESPEDIDA)[number];
+
+const CHAVE_DESPEDIDA: Readonly<Record<VersaoDespedida, ChaveModelo>> = {
+  padrão: 'despedidaPadrao',
+  curta: 'despedidaCurta',
+  avaliações: 'despedidaAvaliacoes',
+};
+
+export function chaveDespedida(versao: VersaoDespedida): ChaveModelo {
+  return CHAVE_DESPEDIDA[versao];
+}
+
+/** Despedida já preenchida com os dados do lead, sempre deixando o link do site. */
+export function despedida(lead: Lead, versao: VersaoDespedida, modelos: Modelos = {}): string {
+  return renderizar(modeloDe(chaveDespedida(versao), modelos), valoresDoLead(lead));
 }

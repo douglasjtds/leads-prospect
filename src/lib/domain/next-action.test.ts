@@ -133,10 +133,33 @@ describe('§5.2 máquina de próxima ação', () => {
     expect(aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toEqual({ proxAcao: '2026-11-16', eventoHistorico: 'cobrou proposta' });
   });
 
-  it.each<Status>(['Fechado', 'Sem interesse'])('%s: nenhuma ação, Enviei inválido', (status) => {
-    const lead = fazerLead({ status });
+  it.each([
+    ['Fechado', ''],
+    ['Sem interesse pulado', '13/11 pulado: outro'],
+    ['Sem interesse pulado e remarcado', '13/11 pulado: outro · 14/11 status → Sem interesse'],
+    ['Sem interesse com despedida enviada', '13/11 status → Sem interesse · 14/11 enviou despedida'],
+  ])('%s: nenhuma ação, Enviei inválido', (caso, historico) => {
+    const lead = fazerLead({ status: caso === 'Fechado' ? 'Fechado' : 'Sem interesse', historico });
     expect(proximaAcao(lead).tipo).toBe('nenhuma');
     expect(() => aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toThrow(AcaoInvalida);
+  });
+
+  it.each(['13/11 status → Sem interesse', '13/11 revisado: sem interesse', ''])(
+    'Sem interesse que conversou (%s): Mensagem de despedida',
+    (historico) => {
+      const lead = fazerLead({ status: 'Sem interesse', historico });
+      expect(proximaAcao(lead)).toEqual({
+        tipo: 'despedida',
+        titulo: 'Mensagem de despedida',
+        sub: 'Encerre com educação e deixe o link do site.',
+        chave: 'despedidaPadrao',
+      });
+    },
+  );
+
+  it('Enviei na despedida só grava o evento, mesmo com variante vinda do cliente', () => {
+    const lead = fazerLead({ status: 'Sem interesse', toques: 2, historico: '13/11 status → Sem interesse' });
+    expect(aplicarAcao(lead, { tipo: 'enviei', variante: 'completa' }, HOJE)).toEqual({ eventoHistorico: 'enviou despedida' });
   });
 
   it('Enviei num lead que já mudou de status lança AcaoInvalida com mensagem', () => {

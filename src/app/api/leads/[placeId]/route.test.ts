@@ -82,11 +82,18 @@ describe('PATCH /api/leads/:placeId', () => {
   });
 
   it('enviei num lead que já mudou de status: 409 sem gravar', async () => {
-    repo.lead = fazerLead({ placeId: 'p1', status: 'Sem interesse', toques: 1, dataContato: '2026-11-12' });
+    repo.lead = fazerLead({ placeId: 'p1', status: 'Fechado', toques: 1, dataContato: '2026-11-12' });
     const resposta = await patch('p1', { acao: { tipo: 'enviei' } });
     expect(resposta.status).toBe(409);
-    expect(((await resposta.json()) as { erro: string }).erro).toMatch(/Sem interesse/);
+    expect(((await resposta.json()) as { erro: string }).erro).toMatch(/Fechado/);
     expect(updateLead).not.toHaveBeenCalled();
+  });
+
+  it('enviei na despedida de um Sem interesse: grava só o evento', async () => {
+    repo.lead = fazerLead({ placeId: 'p1', status: 'Sem interesse', toques: 1, historico: '13/11 status → Sem interesse' });
+    const resposta = await patch('p1', { acao: { tipo: 'enviei' } });
+    expect(resposta.status).toBe(200);
+    expect(patchGravado()).toEqual({ eventoHistorico: 'enviou despedida' });
   });
 
   it('mudarStatus: grava o status novo e o evento', async () => {

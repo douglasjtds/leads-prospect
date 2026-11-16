@@ -18,6 +18,7 @@ const VALORES: ValoresVariaveis = {
   cidade: 'Araçatuba',
   elogio: '.',
   observacao: '',
+  avaliacoes: ' mostrando essas 37 avaliações com nota 5,0',
 };
 
 describe('segmentar e juntar', () => {
@@ -50,6 +51,13 @@ describe('renderizar', () => {
     expect(renderizar('encontrei vocês{elogio} {observacao}\nPra {empresa}', VALORES)).toBe(
       'encontrei vocês.\nPra Clínica Bella',
     );
+  });
+
+  it('{avaliacoes} vira o trecho com os números, ou some quando vazio', () => {
+    expect(renderizar('uma pra {empresa}{avaliacoes}:', VALORES)).toBe(
+      'uma pra Clínica Bella mostrando essas 37 avaliações com nota 5,0:',
+    );
+    expect(renderizar('uma pra {empresa}{avaliacoes}:', { ...VALORES, avaliacoes: '' })).toBe('uma pra Clínica Bella:');
   });
 });
 

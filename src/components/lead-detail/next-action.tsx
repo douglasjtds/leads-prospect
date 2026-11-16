@@ -10,7 +10,14 @@ import type { UseModelos } from '@/hooks/use-modelos';
 import { useAbrirEm, useVariante } from '@/hooks/use-pref';
 import { useShortcuts } from '@/hooks/use-shortcuts';
 import { copiar } from '@/lib/clipboard';
-import { modeloDe, valoresDoLead, varianteEfetiva } from '@/lib/domain/messages';
+import {
+  chaveDespedida,
+  modeloDe,
+  valoresDoLead,
+  varianteEfetiva,
+  VERSOES_DESPEDIDA,
+  type VersaoDespedida,
+} from '@/lib/domain/messages';
 import { MOTIVOS_PULAR, proximaAcao } from '@/lib/domain/next-action';
 import { renderizar, variaveisDe, type ChaveModelo, type ValoresVariaveis } from '@/lib/domain/templates';
 import { VARIANTES, type Acao, type Lead, type ResultadoRevisao, type Variante } from '@/lib/domain/types';
@@ -56,12 +63,17 @@ export function NextAction({ lead, concluir, gestor }: NextActionProps) {
   const chat = urlChat(lead.telefone, abrirEm);
   const dm = urlDm(lead);
 
+  const [versaoDespedida, setVersaoDespedida] = useState<VersaoDespedida>('padrão');
+
   const ehPrimeira = prox.tipo === 'primeira';
-  const fonte: Fonte | null = !prox.chave
+  const ehDespedida = prox.tipo === 'despedida';
+  const chave = ehDespedida ? chaveDespedida(versaoDespedida) : prox.chave;
+  // As variáveis do modelo são trocadas pelos valores deste lead antes de copiar (valoresDoLead).
+  const fonte: Fonte | null = !chave
     ? null
     : ehPrimeira && varianteEfetiva(lead, variante) === 'completa'
       ? { tipo: 'texto', texto: lead.mensagemTexto.trim() }
-      : { tipo: 'modelo', chave: prox.chave, modelo: modeloDe(prox.chave, gestor.modelos), valores: valoresDoLead(lead) };
+      : { tipo: 'modelo', chave, modelo: modeloDe(chave, gestor.modelos), valores: valoresDoLead(lead) };
 
   // No celular não há escolha: o WhatsApp Web não abre conversa lá.
   const seletorAbrir = chat && !celular ? (
@@ -81,12 +93,22 @@ export function NextAction({ lead, concluir, gestor }: NextActionProps) {
       ) : fonte ? (
         <ComTexto
           // Recomeça a caixa ao trocar de lead, de variante ou quando o modelo salvo muda.
-          key={`${lead.placeId}:${prox.tipo}:${ehPrimeira ? variante : ''}:${fonte.tipo === 'modelo' ? fonte.modelo : ''}`}
+          key={`${lead.placeId}:${prox.tipo}:${ehPrimeira ? variante : ''}:${chave ?? ''}:${fonte.tipo === 'modelo' ? fonte.modelo : ''}`}
           fonte={fonte}
           gestor={gestor}
           variante={ehPrimeira ? variante : null}
           setVariante={setVariante}
           semCompleta={ehPrimeira && variante === 'completa' && varianteEfetiva(lead, 'completa') === 'curta'}
+          seletorDespedida={
+            ehDespedida ? (
+              <Segmented
+                label="Versão da despedida"
+                options={VERSOES_DESPEDIDA}
+                value={versaoDespedida}
+                onChange={setVersaoDespedida}
+              />
+            ) : null
+          }
           podePular={lead.status === 'A contatar'}
           chat={chat}
           dm={dm}
@@ -109,6 +131,8 @@ interface ComTextoProps {
   variante: Variante | null;
   setVariante: (v: Variante) => void;
   semCompleta: boolean;
+  /** Seletor das versões da despedida (lead Sem interesse); null nas demais. */
+  seletorDespedida: ReactNode;
   podePular: boolean;
   chat: string | null;
   dm: string | null;
@@ -125,6 +149,7 @@ function ComTexto({
   variante,
   setVariante,
   semCompleta,
+  seletorDespedida,
   podePular,
   chat,
   dm,
@@ -167,6 +192,7 @@ function ComTexto({
           ) : null}
         </div>
       ) : null}
+      {seletorDespedida ? <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">{seletorDespedida}</div> : null}
 
       {fonte.tipo === 'modelo' ? (
         <>

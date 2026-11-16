@@ -19,6 +19,7 @@ export type TipoProximaAcao =
   | 'site'
   | 'emConversa'
   | 'proposta'
+  | 'despedida'
   | 'nenhuma';
 
 export interface ProximaAcao {
@@ -42,6 +43,9 @@ export const EVENTO = {
   furouFila: 'furou fila',
   cobrouResposta: 'cobrou resposta',
   enviouSite: 'enviou site',
+  enviouDespedida: 'enviou despedida',
+  /** Prefixo do Pular: o lead nunca conversou, então não há despedida. */
+  pulado: 'pulado:',
 } as const;
 
 export const MOTIVOS_PULAR = ['número errado', 'rede ou franquia', 'já tem site', 'outro'] as const;
@@ -114,6 +118,14 @@ export function proximaAcao(lead: Lead): ProximaAcao {
       return { tipo: 'nenhuma', titulo: 'Nenhuma', sub: 'Negócio fechado.' };
 
     case 'Sem interesse':
+      if (!historicoTem(lead, EVENTO.pulado) && !historicoTem(lead, EVENTO.enviouDespedida)) {
+        return {
+          tipo: 'despedida',
+          titulo: 'Mensagem de despedida',
+          sub: 'Encerre com educação e deixe o link do site.',
+          chave: 'despedidaPadrao',
+        };
+      }
       return { tipo: 'nenhuma', titulo: 'Nenhuma', sub: 'Lead encerrado.' };
   }
 }
@@ -146,6 +158,8 @@ function enviei(lead: Lead, acao: Extract<Acao, { tipo: 'enviei' }>, hoje: DataI
       return { proxAcao: addDias(hoje, 2), eventoHistorico: EVENTO.enviouSite };
     case 'proposta':
       return { proxAcao: addDias(hoje, 3), eventoHistorico: 'cobrou proposta' };
+    case 'despedida':
+      return { eventoHistorico: EVENTO.enviouDespedida };
     case 'revisar':
     case 'encerrada':
     case 'aguardando':
@@ -198,7 +212,7 @@ function pular(lead: Lead, motivo: string): Patch {
   if (lead.status !== 'A contatar') throw new AcaoInvalida('Só dá para pular um lead em "A contatar".');
   const m = motivo.trim();
   if (!m) throw new AcaoInvalida('Informe o motivo para pular.');
-  return { status: 'Sem interesse', proxAcao: null, eventoHistorico: `pulado: ${m}` };
+  return { status: 'Sem interesse', proxAcao: null, eventoHistorico: `${EVENTO.pulado} ${m}` };
 }
 
 /**

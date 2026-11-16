@@ -1,7 +1,7 @@
 // Modelos de mensagem com variáveis (PRODUCT-SPEC §6). Puro: sem acesso à planilha nem ao DOM.
 // Um modelo é texto com marcadores `{nome}`. Cada marcador vira um dado do lead aberto.
 
-export const VARIAVEIS = ['empresa', 'nicho', 'cidade', 'elogio', 'observacao'] as const;
+export const VARIAVEIS = ['empresa', 'nicho', 'cidade', 'elogio', 'observacao', 'avaliacoes'] as const;
 export type Variavel = (typeof VARIAVEIS)[number];
 export type ValoresVariaveis = Readonly<Record<Variavel, string>>;
 
@@ -12,6 +12,7 @@ export const ROTULO_VARIAVEL: Readonly<Record<Variavel, string>> = {
   cidade: 'cidade',
   elogio: 'elogio',
   observacao: 'observação',
+  avaliacoes: 'avaliações',
 };
 
 export const CHAVES_MODELO = [
@@ -27,6 +28,9 @@ export const CHAVES_MODELO = [
   'rrInstagram',
   'rrAgoraNao',
   'rrLink',
+  'despedidaPadrao',
+  'despedidaCurta',
+  'despedidaAvaliacoes',
 ] as const;
 export type ChaveModelo = (typeof CHAVES_MODELO)[number];
 
@@ -47,6 +51,9 @@ export const NOME_MODELO: Readonly<Record<ChaveModelo, string>> = {
   rrInstagram: 'resposta "Já tenho Instagram"',
   rrAgoraNao: 'resposta "Agora não"',
   rrLink: 'resposta "Link do site"',
+  despedidaPadrao: 'despedida (padrão)',
+  despedidaCurta: 'despedida (curta)',
+  despedidaAvaliacoes: 'despedida (avaliações)',
 };
 
 export function ehChaveModelo(valor: string): valor is ChaveModelo {
