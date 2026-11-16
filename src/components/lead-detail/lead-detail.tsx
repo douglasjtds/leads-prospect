@@ -12,19 +12,30 @@ import { Notes } from './notes';
 import { QuickReplies, temRespostasRapidas } from './quick-replies';
 import { StatusChips } from './status-chips';
 
+/** Anterior/Próximo da barra inferior no celular. */
+export interface NavegacaoDetalhe {
+  /** Posição na lista visível; null se o lead saiu dela (ex.: depois do Enviei). */
+  posicao: { atual: number; total: number } | null;
+  temAnterior: boolean;
+  temProximo: boolean;
+  onAnterior: () => void;
+  onProximo: () => void;
+}
+
 interface LeadDetailProps {
   lead: Lead | null;
   aplicar: (acao: Acao) => void;
-  /** Aplica e seleciona o próximo item da mesma fila do Hoje. */
+  /** Enviei aplica e fica no lead; Pular e Revisar aplicam e seguem na fila do Hoje. */
   concluir: (acao: Acao) => void;
   onVoltar: () => void;
+  navegacao: NavegacaoDetalhe;
 }
 
 const CLASSE_LINK =
   'rounded-xs text-small text-ink underline decoration-line underline-offset-[0.2em] transition-[text-decoration-color] duration-150 hover:decoration-ink';
 
 /** Detalhe do lead (PRODUCT-SPEC §7.5, DESIGN-GUIDELINES §6). */
-export function LeadDetail({ lead, aplicar, concluir, onVoltar }: LeadDetailProps) {
+export function LeadDetail({ lead, aplicar, concluir, onVoltar, navegacao }: LeadDetailProps) {
   if (!lead) {
     return (
       <div className="flex h-full min-h-60 items-center justify-center px-7 py-6">
@@ -40,10 +51,16 @@ export function LeadDetail({ lead, aplicar, concluir, onVoltar }: LeadDetailProp
   const dm = urlDm(lead);
 
   return (
-    <article aria-labelledby="lead-nome" className="max-w-[760px] px-5 py-6 desk:px-7">
-      <Button variant="ghost" className="mb-6 desk:hidden" onClick={onVoltar}>
-        ← Lista
-      </Button>
+    <article aria-labelledby="lead-nome" className="max-w-[760px] px-5 pt-0 pb-24 desk:px-7 desk:py-6">
+      {/* Celular: nome fixo no topo para não perder de vista em qual lead está. */}
+      <div className="sticky top-header z-20 -mx-5 mb-5 flex items-center gap-3 border-b border-line bg-paper px-5 py-2 desk:hidden">
+        <Button variant="ghost" className="shrink-0" onClick={onVoltar}>
+          ← Lista
+        </Button>
+        <p aria-hidden="true" className="min-w-0 truncate text-body-strong">
+          {lead.empresa}
+        </p>
+      </div>
 
       <Kicker>{kicker}</Kicker>
       <h1 id="lead-nome" className="mt-2 text-display">
@@ -117,6 +134,24 @@ export function LeadDetail({ lead, aplicar, concluir, onVoltar }: LeadDetailProp
           <History historico={lead.historico} />
         </Bloco>
       </div>
+
+      {/* Celular: Anterior / Próximo fixos no rodapé, perto do polegar. */}
+      <nav
+        aria-label="Navegar entre leads"
+        className="fixed inset-x-0 bottom-0 z-20 flex items-center justify-between gap-3 border-t border-line bg-paper px-5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] desk:hidden"
+      >
+        <Button variant="ghost" onClick={navegacao.onAnterior} disabled={!navegacao.temAnterior}>
+          ‹ Anterior
+        </Button>
+        {navegacao.posicao ? (
+          <span className="font-mono text-label text-ink-muted">
+            {navegacao.posicao.atual}/{navegacao.posicao.total}
+          </span>
+        ) : null}
+        <Button variant="ghost" onClick={navegacao.onProximo} disabled={!navegacao.temProximo}>
+          Próximo ›
+        </Button>
+      </nav>
     </article>
   );
 }
