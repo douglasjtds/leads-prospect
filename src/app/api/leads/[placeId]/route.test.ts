@@ -5,7 +5,7 @@ import { ErroPlanilha } from '@/lib/sheets/client';
 
 // Teste de integração do PATCH: rota + zod + domínio reais, só o leads-repo é falso.
 
-const repo = vi.hoisted(() => ({ lead: undefined as Lead | undefined }));
+const repo = vi.hoisted(() => ({ lead: undefined as Lead | undefined, extras: [] as Lead[] }));
 
 vi.mock('@/lib/env', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/env')>()),
@@ -16,7 +16,7 @@ vi.mock('@/lib/sheets/leads-repo', async (importOriginal) => {
   const real = await importOriginal<typeof import('@/lib/sheets/leads-repo')>();
   return {
     ...real,
-    listLeads: vi.fn(async () => (repo.lead ? [repo.lead] : [])),
+    listLeads: vi.fn(async () => [...(repo.lead ? [repo.lead] : []), ...repo.extras]),
     getLead: vi.fn(async (placeId: string) => {
       if (!repo.lead || repo.lead.placeId !== placeId) throw new real.LeadNaoEncontrado(placeId);
       return repo.lead;
@@ -151,5 +151,16 @@ describe('GET /api/leads', () => {
     const corpo = (await resposta.json()) as { leads: Lead[]; hoje: string };
     expect(corpo.hoje).toBe(HOJE);
     expect(corpo.leads.map((l) => l.placeId)).toEqual(['p1']);
+  });
+
+  it('deixa de fora as linhas sem Place ID e devolve os números delas', async () => {
+    repo.extras = [fazerLead({ placeId: '', linha: 246 }), fazerLead({ placeId: '', linha: 247 })];
+    try {
+      const corpo = (await (await GET()).json()) as { leads: Lead[]; semPlaceId: number[] };
+      expect(corpo.leads.map((l) => l.placeId)).toEqual(['p1']);
+      expect(corpo.semPlaceId).toEqual([246, 247]);
+    } finally {
+      repo.extras = [];
+    }
   });
 });
