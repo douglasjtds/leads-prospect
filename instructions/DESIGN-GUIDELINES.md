@@ -179,7 +179,10 @@ Mono `micro`, borda `line`, fundo `raised`, raio 2px. Dentro de botão escuro: b
 - Container máximo **1280px** (`max-w-content` do site), padding lateral 20px (32px a partir de 768px).
 - Header fixo de 64px (`--header-height` do site) com borda inferior `line`, fundo `paper`.
 - Desktop (≥ 860px): grid `minmax(300px, 420px) 1fr`. Lista e detalhe rolam de forma independente.
-- Mobile (< 860px): uma coluna. Selecionar um lead mostra só o detalhe, com "← Lista".
+- Mobile (< 860px): uma coluna. Selecionar um lead mostra só o detalhe. No topo do detalhe, uma
+  barra fixa logo abaixo do header com "← Lista" e o nome do lead (uma linha, cortado com
+  reticências). No rodapé, uma barra fixa com "‹ Anterior", a posição em mono (`3/18`) e
+  "Próximo ›"; botões desabilitados nas pontas. O toast sobe para ficar acima dela.
   O contador de meta some do header.
 - Detalhe: largura máxima de 760px, padding 24px 28px. Blocos separados por divisória `line` com
   rótulo `label` em minúsculas (`status`, `próxima ação`, `observações`, `histórico`).

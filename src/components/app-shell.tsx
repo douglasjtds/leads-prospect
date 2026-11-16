@@ -21,7 +21,7 @@ import { buscar } from '@/lib/domain/search';
 import { funil } from '@/lib/domain/stats';
 import { contarEnviadosHoje, proximoNaFila, secoesHoje } from '@/lib/domain/today';
 import { STATUS, type Acao, type Status } from '@/lib/domain/types';
-import { vizinho } from '@/lib/nav';
+import { navegar, posicao, vizinhosEm, type Ancora } from '@/lib/nav';
 
 /** Paginação da aba Todos (PRODUCT-SPEC §7.6). */
 const POR_PAGINA = 60;
@@ -38,6 +38,8 @@ export function AppShell() {
   /** undefined: o usuário ainda não escolheu; no desktop vale o primeiro item do Hoje. */
   const [escolhido, setEscolhido] = useState<string | null | undefined>(undefined);
   const [vista, setVista] = useState<'lista' | 'detalhe'>('lista');
+  /** Vizinhos do último lead marcado como Enviei, que costuma sair da fila e continua aberto. */
+  const [ancora, setAncora] = useState<Ancora | null>(null);
 
   const buscaRef = useRef<HTMLInputElement>(null);
   const rolagemLista = useRef(0);
@@ -86,17 +88,31 @@ export function AppShell() {
   }
 
   function andar(passo: 1 | -1) {
-    const proximo = vizinho(ordemVisivel(), selecionadoId, passo);
-    if (proximo) irPara(proximo);
+    const alvo = navegar(ordemVisivel(), selecionadoId, passo, ancora);
+    if (alvo && alvo !== selecionadoId) irPara(alvo);
   }
+
+  const ordem = ordemVisivel();
+  const anteriorId = navegar(ordem, selecionadoId, -1, ancora);
+  const proximoId = navegar(ordem, selecionadoId, 1, ancora);
 
   const aplicarNoSelecionado = (acao: Acao) => {
     if (selecionado) void aplicar(selecionado.placeId, acao);
   };
 
-  /** Enviei, Pular e Revisar: aplica e segue para o item logo abaixo na mesma fila do Hoje. */
+  /**
+   * Enviei: aplica e continua no lead, guardando a posição para Próximo/Anterior.
+   * Pular e Revisar: aplica e segue para o item logo abaixo na mesma fila do Hoje.
+   */
   const concluir = (acao: Acao) => {
     if (!selecionado) return;
+    if (acao.tipo === 'enviei') {
+      setAncora(vizinhosEm(ordemVisivel(), selecionado.placeId));
+      // Fixa a seleção: sem isso, no desktop o "primeiro do Hoje" implícito mudaria sozinho.
+      setEscolhido(selecionado.placeId);
+      void aplicar(selecionado.placeId, acao);
+      return;
+    }
     const proximo = buscando ? null : proximoNaFila(secoes, selecionado.placeId);
     void aplicar(selecionado.placeId, acao);
     if (proximo) irPara(proximo);
@@ -308,6 +324,13 @@ export function AppShell() {
                 aplicar={aplicarNoSelecionado}
                 concluir={concluir}
                 onVoltar={voltarParaLista}
+                navegacao={{
+                  posicao: posicao(ordem, selecionadoId),
+                  temAnterior: anteriorId !== null && anteriorId !== selecionadoId,
+                  temProximo: proximoId !== null && proximoId !== selecionadoId,
+                  onAnterior: () => andar(-1),
+                  onProximo: () => andar(1),
+                }}
               />
             </div>
           </main>

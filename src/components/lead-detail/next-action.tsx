@@ -19,7 +19,7 @@ import { CLASSE_TEXTAREA } from './bloco';
 
 interface NextActionProps {
   lead: Lead;
-  /** Aplica e avança para o próximo da fila do Hoje (Enviei, Pular, Revisar). */
+  /** Enviei aplica e fica no lead; Pular e Revisar aplicam e avançam na fila do Hoje. */
   concluir: (acao: Acao) => void;
 }
 
