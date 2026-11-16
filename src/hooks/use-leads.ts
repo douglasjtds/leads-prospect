@@ -19,6 +19,8 @@ const ERRO_TIMEOUT = 'o servidor demorou mais de 20s para responder. Tente de no
 export interface UseLeads {
   leads: Lead[];
   hoje: DataISO | null;
+  /** Linhas da planilha sem Place ID, que ficaram fora da lista. */
+  semPlaceId: number[];
   carregando: boolean;
   erro: string | null;
   recarregar: () => Promise<void>;
@@ -61,6 +63,12 @@ function ehListaDeLeads(corpo: unknown): corpo is { leads: Lead[]; hoje: DataISO
   );
 }
 
+/** Campo opcional: um servidor antigo não manda; qualquer coisa fora do formato vira lista vazia. */
+function linhasSemPlaceId(corpo: object): number[] {
+  if (!('semPlaceId' in corpo) || !Array.isArray(corpo.semPlaceId)) return [];
+  return corpo.semPlaceId.filter((n): n is number => typeof n === 'number');
+}
+
 function ehRespostaLead(corpo: unknown): corpo is { lead: Lead } {
   return typeof corpo === 'object' && corpo !== null && 'lead' in corpo && typeof corpo.lead === 'object';
 }
@@ -68,6 +76,7 @@ function ehRespostaLead(corpo: unknown): corpo is { lead: Lead } {
 export function useLeads(): UseLeads {
   const [leads, setLeadsState] = useState<Lead[]>([]);
   const [hoje, setHoje] = useState<DataISO | null>(null);
+  const [semPlaceId, setSemPlaceId] = useState<number[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -105,6 +114,7 @@ export function useLeads(): UseLeads {
         if (!ehListaDeLeads(corpo)) throw new ErroApi('resposta inesperada do servidor.');
         // Uma ação ainda em voo vence a recarga: o PATCH devolve o lead gravado logo depois.
         if (pendentes.current === 0) setLeads(() => corpo.leads);
+        setSemPlaceId(linhasSemPlaceId(corpo));
         hojeRef.current = corpo.hoje;
         setHoje(corpo.hoje);
         setErro(null);
@@ -184,5 +194,5 @@ export function useLeads(): UseLeads {
     [substituir],
   );
 
-  return { leads, hoje, carregando, erro, recarregar, aplicar };
+  return { leads, hoje, semPlaceId, carregando, erro, recarregar, aplicar };
 }

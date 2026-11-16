@@ -19,6 +19,7 @@ import { useShortcuts } from '@/hooks/use-shortcuts';
 import { cx } from '@/lib/cx';
 import { buscar } from '@/lib/domain/search';
 import { funil } from '@/lib/domain/stats';
+import { avisoSemPlaceId } from '@/lib/domain/sem-place-id';
 import { contarEnviadosHoje, proximoNaFila, secoesHoje } from '@/lib/domain/today';
 import { STATUS, type Acao, type Status } from '@/lib/domain/types';
 import { vizinho } from '@/lib/nav';
@@ -27,7 +28,7 @@ import { vizinho } from '@/lib/nav';
 const POR_PAGINA = 60;
 
 export function AppShell() {
-  const { leads, hoje, carregando, erro, recarregar, aplicar } = useLeads();
+  const { leads, hoje, semPlaceId, carregando, erro, recarregar, aplicar } = useLeads();
   const [meta, setMeta] = useMeta();
   const desktop = useDesktop();
 
@@ -49,6 +50,12 @@ export function AppShell() {
     () => (hoje ? secoesHoje(leads, hoje, meta, enviadosHoje) : []),
     [leads, hoje, meta, enviadosHoje],
   );
+  const aviso = avisoSemPlaceId(semPlaceId);
+  const faixaAviso = aviso ? (
+    <p role="status" className="border-b border-warn-soft-edge bg-warn-soft px-5 py-2.5 text-small text-ink">
+      {aviso}
+    </p>
+  ) : null;
   const totalHoje = secoes.reduce((soma, s) => soma + s.leads.length, 0);
   const porStatus = useMemo(() => funil(leads), [leads]);
   const resultados = useMemo(() => (buscando ? buscar(leads, termo) : []), [leads, termo, buscando]);
@@ -276,6 +283,7 @@ export function AppShell() {
 
         {aba === 'numeros' && !buscando ? (
           <main {...painelLista} className="mx-auto max-w-content px-5 pt-6 pb-24">
+            {faixaAviso ? <div className="-mx-5 -mt-6 mb-6">{faixaAviso}</div> : null}
             {leads.length === 0 && (carregando || erro) ? (
               <>
                 <Kicker className="pb-3">03 / números</Kicker>
@@ -299,6 +307,7 @@ export function AppShell() {
                 mostrandoDetalhe && 'hidden',
               )}
             >
+              {faixaAviso}
               {conteudoLista()}
             </div>
 
