@@ -9,7 +9,7 @@ import type { Acao, DataISO, Lead } from '@/lib/domain/types';
 // O cliente calcula o patch com a mesma função do servidor só para exibir na hora;
 // o que vale é o lead devolvido pela API.
 
-const TIMEOUT_MS = 20_000;
+export const TIMEOUT_MS = 20_000;
 /** Recarrega ao focar a aba se o último carregamento tiver mais que isso. */
 const RECARREGAR_APOS_MS = 60_000;
 
@@ -26,9 +26,9 @@ export interface UseLeads {
   aplicar: (placeId: string, acao: Acao) => Promise<Lead | null>;
 }
 
-class ErroApi extends Error {}
+export class ErroApi extends Error {}
 
-function irParaLogin(): never {
+export function irParaLogin(): never {
   const destino = window.location.pathname + window.location.search;
   // Navegação completa de propósito: a sessão expirou e o proxy precisa reavaliar a requisição.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
@@ -36,7 +36,7 @@ function irParaLogin(): never {
   throw new ErroApi('Sessão expirada. Entre de novo.');
 }
 
-async function lerErro(resposta: Response): Promise<string> {
+export async function lerErro(resposta: Response): Promise<string> {
   const corpo: unknown = await resposta.json().catch(() => null);
   if (typeof corpo === 'object' && corpo !== null && 'erro' in corpo && typeof corpo.erro === 'string') {
     return corpo.erro;
@@ -44,7 +44,7 @@ async function lerErro(resposta: Response): Promise<string> {
   return `o servidor respondeu ${resposta.status}.`;
 }
 
-function mensagemDe(erro: unknown): string {
+export function mensagemDe(erro: unknown): string {
   if (erro instanceof DOMException && (erro.name === 'TimeoutError' || erro.name === 'AbortError')) return ERRO_TIMEOUT;
   if (erro instanceof ErroApi) return erro.message;
   return ERRO_REDE;

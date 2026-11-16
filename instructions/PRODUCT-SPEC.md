@@ -136,11 +136,43 @@ depois não foi registrado (são os cerca de 30 primeiros). Quatro botões:
 | Respondeu | status Respondeu, Próx. ação vazia, histórico `revisado: respondeu` |
 | Sem interesse | status Sem interesse, histórico `revisado: sem interesse` |
 
-## 6. Mensagens (copy exata)
+## 6. Mensagens (textos padrão)
 
 Regras: sem travessão; nunca escrever "encontrei a {empresa}" (erra o gênero com profissionais
 homens), usar "encontrei vocês" e citar o nome só como "pra {empresa}", sem artigo; nota com vírgula decimal (`5,0`). O texto aparece numa caixa editável
 antes de copiar.
+
+### 6.1 Mensagens personalizáveis ("Salvar para todos")
+
+Os textos desta seção são os **padrões**. Cada um é um modelo que o Douglas pode trocar pela tela:
+
+- A caixa mostra o texto do lead aberto. Os trechos que mudam a cada lead são **variáveis** e
+  aparecem destacados como etiquetas, com o valor do lead. Não dá para editar uma etiqueta por
+  dentro, só apagá-la inteira. Digitar `{empresa}` (ou outra variável) põe a etiqueta de volta.
+- Editar a caixa vale só para aquele envio. Quando o texto difere do modelo em uso, aparece
+  **Salvar para todos**, que grava o modelo (com as variáveis, não com os valores do lead).
+- Antes de gravar, o app confere o modelo e pede confirmação se:
+  - uma variável que estava no modelo sumiu ("Sumiu do texto: empresa...");
+  - um valor do lead aberto foi escrito à mão no texto (ex.: o nome da empresa), porque vai sair
+    igual para todos;
+  - e **impede** gravar se houver `{algo}` que não é variável.
+- Com modelo salvo, aparece **Restaurar padrão** (com confirmação), que volta ao texto abaixo.
+- A variante completa (coluna `Mensagem (texto)`) é por lead e não tem "Salvar para todos".
+- As respostas rápidas se editam em "Editar respostas", com o mesmo fluxo.
+
+Variáveis (valem em qualquer mensagem):
+
+| Variável | Valor |
+|---|---|
+| `{empresa}` | nome do lead; vazio vira `vocês` |
+| `{nicho}` | nicho no plural (regra abaixo) |
+| `{cidade}` | cidade do lead |
+| `{elogio}` | `: {N} avaliações com nota {nota}, parabéns!` se Avaliações ≥ 5 e houver Nota; senão `.` |
+| `{observacao}` | frase da situação (abaixo); pode ser vazia |
+
+Os modelos salvos ficam na aba `Mensagens` da planilha (colunas `Chave` e `Texto`). Chave sem
+linha, ou com Texto vazio, usa o padrão. Chaves: `primeiraPadrao`, `primeiraSiteAmador`, `fu3`,
+`fu7`, `furar`, `cobrarRA`, `site`, `proposta`, `rrPreco`, `rrInstagram`, `rrAgoraNao`, `rrLink`.
 
 **Nicho no plural:** Clínica de estética → clínicas de estética, Dentista → dentistas, Psicólogo →
 psicólogos, Nutricionista → nutricionistas, Advogado → advogados, Contabilidade → escritórios de

@@ -51,6 +51,8 @@ src/
       leads/route.ts         GET lista completa + hoje
       leads/[placeId]/route.ts   PATCH ação
       leads/import/route.ts  POST novas linhas (dedupe)
+      mensagens/route.ts     GET modelos de mensagem salvos
+      mensagens/[chave]/route.ts  PUT salvar para todos, DELETE restaurar padrão
   components/
     header.tsx  search.tsx  tabs.tsx
     lead-list.tsx  lead-list-item.tsx
@@ -58,13 +60,15 @@ src/
     stats.tsx  toast.tsx  ui/ (button, chip, pill, segmented)
   hooks/
     use-leads.ts             carrega, aplica ações com otimismo, reverte em erro
+    use-modelos.ts           modelos de mensagem salvos, salvar e restaurar com otimismo
     use-shortcuts.ts
   lib/
     domain/
       types.ts               Lead, Status, Situacao, Acao, Patch
       dates.ts               hoje em America/Sao_Paulo, addDias, formatos
       phone.ts               dígitos, celular
-      messages.ts            copy exata da PRODUCT-SPEC §6
+      messages.ts            textos padrão da PRODUCT-SPEC §6 e valores das variáveis
+      templates.ts           modelos com {variaveis}: segmentar, renderizar, validar
       next-action.ts         proximaAcao(lead, hoje) e aplicar(acao)
       today.ts               secoesHoje(leads, hoje, meta)
       search.ts              busca sem acento e por dígitos
@@ -73,7 +77,8 @@ src/
     sheets/
       client.ts              token JWT e fetch autenticado
       schema.ts              nomes das colunas, conversões de tipo
-      leads-repo.ts          listLeads, updateLead, appendLeads, ensureColumns
+      leads-repo.ts          listLeads, updateLead, appendLeads, ensureColumns,
+                             listModelos, salvarModelo, restaurarModelo (aba Mensagens)
     auth/
       session.ts             assinar e verificar cookie (HMAC)
     env.ts                   leitura e validação das variáveis (zod)
@@ -125,6 +130,13 @@ GET ao focar a aba de novo depois de 60 segundos (para pegar edições feitas di
 já criou `Histórico`, `Próx. ação` e `Toques`, a migração reaproveita essas colunas.
 A migração também aplica a validação de dados da coluna `Status` com a lista completa de status.
 
+### 4.7 Aba Mensagens
+Modelos de mensagem salvos pela tela (PRODUCT-SPEC §6.1). Cabeçalho `Chave | Texto`, achado pelo
+nome. Leitura: uma chamada (`'Mensagens'!A1:ZZ`); aba inexistente = nenhum modelo salvo. Escrita:
+cria a aba e o cabeçalho se faltarem, acha a linha pela `Chave` na hora (nunca por número vindo do
+cliente) e grava com `RAW`, ou anexa uma linha nova. Restaurar limpa o `Texto`. Chave repetida
+gera 409.
+
 ## 5. API
 
 Todas as rotas exigem sessão (via proxy), exceto `/api/auth/*`. Respostas em JSON. Route handlers e proxy rodam em Node e são dinâmicos por padrão no Next 16 (sem `runtime` nem `dynamic` exportados; nada de `use cache` nas rotas).
@@ -134,6 +146,9 @@ Todas as rotas exigem sessão (via proxy), exceto `/api/auth/*`. Respostas em JS
 | `GET /api/leads` | nada | `{ leads: Lead[], hoje: 'yyyy-MM-dd' }` |
 | `PATCH /api/leads/:placeId` | `{ acao: Acao }` | `{ lead: Lead }` |
 | `POST /api/leads/import` | `{ linhas: NovaLinha[] }` | `{ inseridos, duplicados, ignorados }` |
+| `GET /api/mensagens` | nada | `{ modelos: { [chave]: texto } }` |
+| `PUT /api/mensagens/:chave` | `{ texto }` | 204; 400 com `{variavel}` desconhecida; 404 chave inexistente |
+| `DELETE /api/mensagens/:chave` | nada | 204 (volta ao padrão) |
 | `POST /api/auth/login` | `{ senha }` | 204 + cookie |
 | `POST /api/auth/logout` | nada | 204 |
 
@@ -198,6 +213,8 @@ Vitest, cobrindo no mínimo:
 - `today`: montagem e ordem das seções, limite pela meta
 - `messages`: as três variações da 1ª mensagem, plural do nicho, nota com vírgula, prova com
   menos de 5 avaliações
+- `templates`: segmentar/renderizar, modelo salvo com prioridade, validação (variável faltando,
+  desconhecida, valor escrito à mão)
 - `phone`: celular válido e fixo
 - `schema`: conversão de serial para data e de volta, histórico concatenado
 - `search`: acento, maiúsculas, dígitos do telefone

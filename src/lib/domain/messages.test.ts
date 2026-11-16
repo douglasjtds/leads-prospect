@@ -194,18 +194,22 @@ describe('demais mensagens', () => {
   it('respostas rápidas', () => expect(respostasRapidas()).toMatchInlineSnapshot(`
     [
       {
+        "chave": "rrPreco",
         "rotulo": "Quanto custa?",
         "texto": "O plano essencial começa em R$ 500, tá explicado no site. Se quiser, te digo o que entraria no caso de vocês pra ficar mais claro.",
       },
       {
+        "chave": "rrInstagram",
         "rotulo": "Já tenho Instagram",
         "texto": "Faz sentido, e o Instagram continua sendo a vitrine. A página não substitui, ela complementa: no Instagram a pessoa precisa rolar o feed pra achar endereço, serviços e horários. Na página ela acha tudo em 5 segundos e clica no WhatsApp.",
       },
       {
+        "chave": "rrAgoraNao",
         "rotulo": "Agora não",
         "texto": "Tranquilo! Posso te chamar de novo em janeiro? Começo de ano é quando o pessoal costuma organizar essas coisas.",
       },
       {
+        "chave": "rrLink",
         "rotulo": "Link do site",
         "texto": "https://douglastertuliano.vercel.app/",
       },
@@ -217,7 +221,7 @@ describe('regras de texto', () => {
   it('nenhuma mensagem tem travessão', () => {
     const chaves: ChaveMensagem[] = ['fu3', 'fu7', 'furar', 'cobrarRA', 'site', 'proposta'];
     const textos = [
-      ...chaves.map(mensagem),
+      ...chaves.map((c) => mensagem(c)),
       ...respostasRapidas().flatMap((r) => [r.rotulo, r.texto]),
       ...SITUACOES.map((situacao) => primeiraMensagem(fazerLead({ situacao }), 'curta')),
     ];
