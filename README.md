@@ -2,7 +2,7 @@
 
 Ferramenta pessoal de prospecção do Douglas Tertuliano. Ela organiza o contato com pequenos negócios
 encontrados no Google Maps (via Apify) que não têm site próprio, para oferecer landing pages
-(plano essencial a partir de R$ 400, https://douglastertuliano.vercel.app/).
+(plano essencial a partir de R$ 500, https://douglastertuliano.vercel.app/).
 
 A ferramenta **não dispara mensagens sozinha**. Ela prepara a mensagem certa para cada lead,
 copia o texto, abre o chat do WhatsApp e registra o que aconteceu. O envio é sempre manual, com um
