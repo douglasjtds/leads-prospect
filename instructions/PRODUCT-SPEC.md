@@ -327,7 +327,9 @@ Ao abrir, o primeiro item da fila fica selecionado (no desktop).
   seletor `curta | completa` (só na 1ª mensagem), botões:
   - **Copiar e abrir WhatsApp** (`C`): copia o texto da caixa e abre o chat do número, sem texto
     na URL
-  - **Enviei** (`E`): aplica a transição da §5.2 e seleciona o próximo item da mesma fila
+  - **Enviei** (`E`): aplica a transição da §5.2 e continua no lead. Para seguir, use Próximo
+    (ou `J`), que leva ao item que estava logo abaixo na lista, mesmo que o lead tenha saído dela.
+    Pular e Revisar continuam avançando sozinhos para o próximo item da mesma fila
   - **Pular** (só em A contatar), com motivo
   - Seletor `abrir no: whatsapp web | app` (lembrado no navegador)
 - **Respostas rápidas** (quando aplicável)
