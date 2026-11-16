@@ -14,6 +14,7 @@ import { Kicker } from '@/components/ui/kicker';
 import { LeadDetail } from '@/components/lead-detail/lead-detail';
 import { useDesktop } from '@/hooks/use-desktop';
 import { useLeads } from '@/hooks/use-leads';
+import { useModelos } from '@/hooks/use-modelos';
 import { useMeta } from '@/hooks/use-pref';
 import { useShortcuts } from '@/hooks/use-shortcuts';
 import { cx } from '@/lib/cx';
@@ -29,6 +30,7 @@ const POR_PAGINA = 60;
 
 export function AppShell() {
   const { leads, hoje, semPlaceId, carregando, erro, recarregar, aplicar } = useLeads();
+  const gestorModelos = useModelos();
   const [meta, setMeta] = useMeta();
   const desktop = useDesktop();
 
@@ -333,6 +335,7 @@ export function AppShell() {
                 aplicar={aplicarNoSelecionado}
                 concluir={concluir}
                 onVoltar={voltarParaLista}
+                gestor={gestorModelos}
                 navegacao={{
                   posicao: posicao(ordem, selecionadoId),
                   temAnterior: anteriorId !== null && anteriorId !== selecionadoId,

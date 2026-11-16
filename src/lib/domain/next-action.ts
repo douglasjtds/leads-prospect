@@ -1,7 +1,8 @@
 import { addDias } from './dates';
 import { concatHistorico } from './historico';
-import { mensagem, primeiraMensagem, varianteEfetiva } from './messages';
+import { chavePrimeira, varianteEfetiva } from './messages';
 import { celular } from './phone';
+import type { ChaveModelo } from './templates';
 import type { Acao, DataISO, Lead, Patch, ResultadoRevisao, Status } from './types';
 
 // Máquina de próxima ação da PRODUCT-SPEC §5.2 e §5.3.
@@ -18,13 +19,15 @@ export type TipoProximaAcao =
   | 'site'
   | 'emConversa'
   | 'proposta'
+  | 'despedida'
   | 'nenhuma';
 
 export interface ProximaAcao {
   tipo: TipoProximaAcao;
   titulo: string;
   sub: string;
-  texto?: string;
+  /** Modelo da mensagem (PRODUCT-SPEC §6). Quem exibe renderiza com os modelos salvos e o lead. */
+  chave?: ChaveModelo;
 }
 
 /** Ação que não se aplica ao estado atual do lead. Vira 409 na API. */
@@ -40,6 +43,9 @@ export const EVENTO = {
   furouFila: 'furou fila',
   cobrouResposta: 'cobrou resposta',
   enviouSite: 'enviou site',
+  enviouDespedida: 'enviou despedida',
+  /** Prefixo do Pular: o lead nunca conversou, então não há despedida. */
+  pulado: 'pulado:',
 } as const;
 
 export const MOTIVOS_PULAR = ['número errado', 'rede ou franquia', 'já tem site', 'outro'] as const;
@@ -65,7 +71,7 @@ export function proximaAcao(lead: Lead): ProximaAcao {
         sub: celular(lead.telefone)
           ? 'Copie, cole no WhatsApp e envie.'
           : 'Sem celular: copie e mande por DM no link atual.',
-        texto: primeiraMensagem(lead, 'curta'),
+        chave: chavePrimeira(lead),
       };
 
     case 'Contatado':
@@ -77,10 +83,10 @@ export function proximaAcao(lead: Lead): ProximaAcao {
         };
       }
       if (lead.toques === 1) {
-        return { tipo: 'fu3', titulo: 'Follow-up dia 3', sub: 'Ainda sem resposta à 1ª mensagem.', texto: mensagem('fu3') };
+        return { tipo: 'fu3', titulo: 'Follow-up dia 3', sub: 'Ainda sem resposta à 1ª mensagem.', chave: 'fu3' };
       }
       if (lead.toques === 2) {
-        return { tipo: 'fu7', titulo: 'Follow-up final', sub: 'Último toque da sequência.', texto: mensagem('fu7') };
+        return { tipo: 'fu7', titulo: 'Follow-up final', sub: 'Último toque da sequência.', chave: 'fu7' };
       }
       return { tipo: 'encerrada', titulo: 'Sequência encerrada', sub: 'Três mensagens sem resposta. Nada a fazer.' };
 
@@ -90,28 +96,36 @@ export function proximaAcao(lead: Lead): ProximaAcao {
           tipo: 'furar',
           titulo: 'Furar a resposta automática',
           sub: 'Peça para falar com o responsável.',
-          texto: mensagem('furar'),
+          chave: 'furar',
         };
       }
       if (!historicoTem(lead, EVENTO.cobrouResposta)) {
-        return { tipo: 'cobrarRA', titulo: 'Cobrar retorno', sub: 'Já furou a fila e ainda não teve resposta.', texto: mensagem('cobrarRA') };
+        return { tipo: 'cobrarRA', titulo: 'Cobrar retorno', sub: 'Já furou a fila e ainda não teve resposta.', chave: 'cobrarRA' };
       }
       return { tipo: 'aguardando', titulo: 'Aguardando', sub: 'Já cobrou o retorno. Agora é esperar.' };
 
     case 'Respondeu':
     case 'Reunião marcada':
       if (!historicoTem(lead, EVENTO.enviouSite)) {
-        return { tipo: 'site', titulo: 'Mandar o site', sub: 'Responda com o site e a ideia da página.', texto: mensagem('site') };
+        return { tipo: 'site', titulo: 'Mandar o site', sub: 'Responda com o site e a ideia da página.', chave: 'site' };
       }
       return { tipo: 'emConversa', titulo: 'Em conversa', sub: 'Site enviado. Use as respostas rápidas.' };
 
     case 'Proposta enviada':
-      return { tipo: 'proposta', titulo: 'Cobrar a proposta', sub: 'Pergunte se deu para ver a proposta.', texto: mensagem('proposta') };
+      return { tipo: 'proposta', titulo: 'Cobrar a proposta', sub: 'Pergunte se deu para ver a proposta.', chave: 'proposta' };
 
     case 'Fechado':
       return { tipo: 'nenhuma', titulo: 'Nenhuma', sub: 'Negócio fechado.' };
 
     case 'Sem interesse':
+      if (!historicoTem(lead, EVENTO.pulado) && !historicoTem(lead, EVENTO.enviouDespedida)) {
+        return {
+          tipo: 'despedida',
+          titulo: 'Mensagem de despedida',
+          sub: 'Encerre com educação e deixe o link do site.',
+          chave: 'despedidaPadrao',
+        };
+      }
       return { tipo: 'nenhuma', titulo: 'Nenhuma', sub: 'Lead encerrado.' };
   }
 }
@@ -144,6 +158,8 @@ function enviei(lead: Lead, acao: Extract<Acao, { tipo: 'enviei' }>, hoje: DataI
       return { proxAcao: addDias(hoje, 2), eventoHistorico: EVENTO.enviouSite };
     case 'proposta':
       return { proxAcao: addDias(hoje, 3), eventoHistorico: 'cobrou proposta' };
+    case 'despedida':
+      return { eventoHistorico: EVENTO.enviouDespedida };
     case 'revisar':
     case 'encerrada':
     case 'aguardando':
@@ -196,7 +212,7 @@ function pular(lead: Lead, motivo: string): Patch {
   if (lead.status !== 'A contatar') throw new AcaoInvalida('Só dá para pular um lead em "A contatar".');
   const m = motivo.trim();
   if (!m) throw new AcaoInvalida('Informe o motivo para pular.');
-  return { status: 'Sem interesse', proxAcao: null, eventoHistorico: `pulado: ${m}` };
+  return { status: 'Sem interesse', proxAcao: null, eventoHistorico: `${EVENTO.pulado} ${m}` };
 }
 
 /**

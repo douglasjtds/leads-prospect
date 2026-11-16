@@ -114,7 +114,8 @@ O Douglas pode mudar o status manualmente a qualquer momento (chips na tela do l
 | Respondeu, Reunião marcada | histórico sem `enviou site` | Mandar o site | `site` | Próx. ação +2, histórico `enviou site` |
 | Respondeu, Reunião marcada | já enviou o site | Em conversa | respostas rápidas | |
 | Proposta enviada | | Cobrar a proposta | `proposta` | Próx. ação +3, histórico `cobrou proposta` |
-| Fechado, Sem interesse | | nenhuma | | |
+| Sem interesse | histórico sem `pulado:` e sem `enviou despedida` | Mensagem de despedida | `despedida` (3 versões) | Próx. ação continua vazia, histórico `enviou despedida` |
+| Fechado, Sem interesse | demais casos | nenhuma | | |
 
 **Mudança manual de status** (chip) grava histórico `status → X` e ajusta a Próx. ação:
 - para `Respondeu`, `Reunião marcada`, `Resposta automática`, `Fechado`, `Sem interesse`: vazia;
@@ -136,11 +137,45 @@ depois não foi registrado (são os cerca de 30 primeiros). Quatro botões:
 | Respondeu | status Respondeu, Próx. ação vazia, histórico `revisado: respondeu` |
 | Sem interesse | status Sem interesse, histórico `revisado: sem interesse` |
 
-## 6. Mensagens (copy exata)
+## 6. Mensagens (textos padrão)
 
 Regras: sem travessão; nunca escrever "encontrei a {empresa}" (erra o gênero com profissionais
 homens), usar "encontrei vocês" e citar o nome só como "pra {empresa}", sem artigo; nota com vírgula decimal (`5,0`). O texto aparece numa caixa editável
 antes de copiar.
+
+### 6.1 Mensagens personalizáveis ("Salvar para todos")
+
+Os textos desta seção são os **padrões**. Cada um é um modelo que o Douglas pode trocar pela tela:
+
+- A caixa mostra o texto do lead aberto. Os trechos que mudam a cada lead são **variáveis** e
+  aparecem destacados como etiquetas, com o valor do lead. Não dá para editar uma etiqueta por
+  dentro, só apagá-la inteira. Digitar `{empresa}` (ou outra variável) põe a etiqueta de volta.
+- Editar a caixa vale só para aquele envio. Quando o texto difere do modelo em uso, aparece
+  **Salvar para todos**, que grava o modelo (com as variáveis, não com os valores do lead).
+- Antes de gravar, o app confere o modelo e pede confirmação se:
+  - uma variável que estava no modelo sumiu ("Sumiu do texto: empresa...");
+  - um valor do lead aberto foi escrito à mão no texto (ex.: o nome da empresa), porque vai sair
+    igual para todos;
+  - e **impede** gravar se houver `{algo}` que não é variável.
+- Com modelo salvo, aparece **Restaurar padrão** (com confirmação), que volta ao texto abaixo.
+- A variante completa (coluna `Mensagem (texto)`) é por lead e não tem "Salvar para todos".
+- As respostas rápidas se editam em "Editar respostas", com o mesmo fluxo.
+
+Variáveis (valem em qualquer mensagem):
+
+| Variável | Valor |
+|---|---|
+| `{empresa}` | nome do lead; vazio vira `vocês` |
+| `{nicho}` | nicho no plural (regra abaixo) |
+| `{cidade}` | cidade do lead |
+| `{elogio}` | `: {N} avaliações com nota {nota}, parabéns!` se Avaliações ≥ 5 e houver Nota; senão `.` |
+| `{observacao}` | frase da situação (abaixo); pode ser vazia |
+| `{avaliacoes}` | ` mostrando essas {N} avaliações com nota {nota}` se Avaliações ≥ 5 e houver Nota; senão vazio (usada na despedida) |
+
+Os modelos salvos ficam na aba `Mensagens` da planilha (colunas `Chave` e `Texto`). Chave sem
+linha, ou com Texto vazio, usa o padrão. Chaves: `primeiraPadrao`, `primeiraSiteAmador`, `fu3`,
+`fu7`, `furar`, `cobrarRA`, `site`, `proposta`, `rrPreco`, `rrInstagram`, `rrAgoraNao`, `rrLink`,
+`despedidaPadrao`, `despedidaCurta`, `despedidaAvaliacoes`.
 
 **Nicho no plural:** Clínica de estética → clínicas de estética, Dentista → dentistas, Psicólogo →
 psicólogos, Nutricionista → nutricionistas, Advogado → advogados, Contabilidade → escritórios de
@@ -212,6 +247,34 @@ Me conta: hoje a maioria dos clientes chega como? Indicação, Instagram ou Goog
 ```
 Oi! Conseguiu dar uma olhada na proposta? Fico à disposição pra ajustar o que precisar.
 ```
+
+### `despedida` · lead Sem interesse
+
+Encerra o contato e deixa o link do site. Três versões num seletor (padrão `padrão`), cada uma
+um modelo editável (`despedidaPadrao`, `despedidaCurta`, `despedidaAvaliacoes`).
+
+`padrão`
+```
+Sem problema, obrigado por responder! Vou deixar aqui meu site com alguns exemplos de páginas que já fiz, caso queira dar uma olhada por curiosidade:
+https://douglastertuliano.vercel.app/
+
+Sem compromisso nenhum. Sucesso pra vocês! 💪
+```
+`curta`
+```
+Tranquilo, obrigado pelo retorno! Se um dia quiser ver como ficaria, deixo aqui alguns trabalhos meus:
+https://douglastertuliano.vercel.app/
+
+Sucesso!
+```
+`avaliações`
+```
+Entendo, obrigado por responder! Só deixo aqui meu site com exemplos de páginas, caso queira ver como ficaria uma pra {empresa}{avaliacoes}:
+https://douglastertuliano.vercel.app/
+
+Sem compromisso, qualquer coisa é só chamar. Abraço!
+```
+Sem Avaliações ≥ 5 com Nota, `{avaliacoes}` fica vazia e a frase termina em `... uma pra {empresa}:`.
 
 ### Respostas rápidas
 

@@ -1,17 +1,31 @@
 import type { Lead, Situacao, Variante } from './types';
+import { renderizar, type ChaveModelo, type Modelos, type ValoresVariaveis } from './templates';
 
-// Copy exata da PRODUCT-SPEC §6. Não reescreva sem pedir.
+// Textos PADRÃO da PRODUCT-SPEC §6. Não reescreva sem pedir. O Douglas pode trocar cada modelo
+// pela tela ("Salvar para todos"); o salvo fica na aba Mensagens e tem prioridade sobre estes.
 
 export type ChaveMensagem = 'fu3' | 'fu7' | 'furar' | 'cobrarRA' | 'site' | 'proposta';
 
 export interface RespostaRapida {
+  chave: ChaveModelo;
   rotulo: string;
   texto: string;
 }
 
 export const URL_SITE = 'https://douglastertuliano.vercel.app/';
 
-const MENSAGENS: Record<ChaveMensagem, string> = {
+const ABERTURA = 'Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.';
+const PESQUISA = 'Estava pesquisando {nicho} em {cidade} no Google e encontrei vocês{elogio}';
+
+export const MODELOS_PADRAO: Readonly<Record<ChaveModelo, string>> = {
+  primeiraPadrao: [ABERTURA, '', `${PESQUISA} {observacao}`, '', 'Posso te mostrar como ficaria uma página pra {empresa}?'].join('\n'),
+  primeiraSiteAmador: [
+    ABERTURA,
+    '',
+    `${PESQUISA} Dei uma olhada na página de vocês e tenho 2 ou 3 ideias pra ela trazer mais clientes.`,
+    '',
+    'Posso te mandar o que pensei pra {empresa}?',
+  ].join('\n'),
   fu3: 'Oi! Passando só pra ver se você viu minha mensagem. Se não for o momento, sem problema, é só me avisar 🙂',
   fu7: 'Última mensagem por aqui, prometo. Se um dia quiserem uma página pra receber quem chega pelo Google, é só me chamar. Sucesso pra vocês!',
   furar:
@@ -26,33 +40,55 @@ const MENSAGENS: Record<ChaveMensagem, string> = {
     'Me conta: hoje a maioria dos clientes chega como? Indicação, Instagram ou Google?',
   ].join('\n'),
   proposta: 'Oi! Conseguiu dar uma olhada na proposta? Fico à disposição pra ajustar o que precisar.',
+  rrPreco:
+    'O plano essencial começa em R$ 500, tá explicado no site. Se quiser, te digo o que entraria no caso de vocês pra ficar mais claro.',
+  rrInstagram:
+    'Faz sentido, e o Instagram continua sendo a vitrine. A página não substitui, ela complementa: no Instagram a pessoa precisa rolar o feed pra achar endereço, serviços e horários. Na página ela acha tudo em 5 segundos e clica no WhatsApp.',
+  rrAgoraNao:
+    'Tranquilo! Posso te chamar de novo em janeiro? Começo de ano é quando o pessoal costuma organizar essas coisas.',
+  rrLink: URL_SITE,
+  despedidaPadrao: [
+    'Sem problema, obrigado por responder! Vou deixar aqui meu site com alguns exemplos de páginas que já fiz, caso queira dar uma olhada por curiosidade:',
+    URL_SITE,
+    '',
+    'Sem compromisso nenhum. Sucesso pra vocês! 💪',
+  ].join('\n'),
+  despedidaCurta: [
+    'Tranquilo, obrigado pelo retorno! Se um dia quiser ver como ficaria, deixo aqui alguns trabalhos meus:',
+    URL_SITE,
+    '',
+    'Sucesso!',
+  ].join('\n'),
+  despedidaAvaliacoes: [
+    'Entendo, obrigado por responder! Só deixo aqui meu site com exemplos de páginas, caso queira ver como ficaria uma pra {empresa}{avaliacoes}:',
+    URL_SITE,
+    '',
+    'Sem compromisso, qualquer coisa é só chamar. Abraço!',
+  ].join('\n'),
 };
 
-const RESPOSTAS_RAPIDAS: readonly RespostaRapida[] = [
-  {
-    rotulo: 'Quanto custa?',
-    texto:
-      'O plano essencial começa em R$ 500, tá explicado no site. Se quiser, te digo o que entraria no caso de vocês pra ficar mais claro.',
-  },
-  {
-    rotulo: 'Já tenho Instagram',
-    texto:
-      'Faz sentido, e o Instagram continua sendo a vitrine. A página não substitui, ela complementa: no Instagram a pessoa precisa rolar o feed pra achar endereço, serviços e horários. Na página ela acha tudo em 5 segundos e clica no WhatsApp.',
-  },
-  {
-    rotulo: 'Agora não',
-    texto:
-      'Tranquilo! Posso te chamar de novo em janeiro? Começo de ano é quando o pessoal costuma organizar essas coisas.',
-  },
-  { rotulo: 'Link do site', texto: URL_SITE },
+const RESPOSTAS_RAPIDAS: ReadonlyArray<{ chave: ChaveModelo; rotulo: string }> = [
+  { chave: 'rrPreco', rotulo: 'Quanto custa?' },
+  { chave: 'rrInstagram', rotulo: 'Já tenho Instagram' },
+  { chave: 'rrAgoraNao', rotulo: 'Agora não' },
+  { chave: 'rrLink', rotulo: 'Link do site' },
 ];
 
-export function mensagem(chave: ChaveMensagem): string {
-  return MENSAGENS[chave];
+/** O modelo em uso: o salvo pela tela, ou o padrão. */
+export function modeloDe(chave: ChaveModelo, modelos: Modelos = {}): string {
+  const salvo = modelos[chave];
+  return salvo?.trim() ? salvo : MODELOS_PADRAO[chave];
 }
 
-export function respostasRapidas(): readonly RespostaRapida[] {
-  return RESPOSTAS_RAPIDAS;
+const SEM_LEAD: ValoresVariaveis = { empresa: 'vocês', nicho: '', cidade: '', elogio: '.', observacao: '', avaliacoes: '' };
+
+export function mensagem(chave: ChaveMensagem, lead: Lead | null = null, modelos: Modelos = {}): string {
+  return renderizar(modeloDe(chave, modelos), lead ? valoresDoLead(lead) : SEM_LEAD);
+}
+
+export function respostasRapidas(lead: Lead | null = null, modelos: Modelos = {}): readonly RespostaRapida[] {
+  const valores = lead ? valoresDoLead(lead) : SEM_LEAD;
+  return RESPOSTAS_RAPIDAS.map(({ chave, rotulo }) => ({ chave, rotulo, texto: renderizar(modeloDe(chave, modelos), valores) }));
 }
 
 // ---------- Nicho no plural ----------
@@ -91,25 +127,28 @@ export function nichoPlural(nicho: string): string {
 
 // ---------- 1ª mensagem ----------
 
-const ABERTURA = 'Oi, tudo bem? Aqui é o Douglas, sou desenvolvedor web.';
-
 /** Nota com vírgula decimal e uma casa (5 → "5,0"). */
 export function formatarNota(nota: number): string {
   return nota.toFixed(1).replace('.', ',');
 }
 
-function prova(lead: Lead): string {
-  const pesquisa = `Estava pesquisando ${nichoPlural(lead.nicho)} em ${lead.cidade} no Google e encontrei vocês`;
-  if (lead.avaliacoes !== null && lead.avaliacoes >= 5 && lead.nota !== null) {
-    const n = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(lead.avaliacoes);
-    return `${pesquisa}: ${n} avaliações com nota ${formatarNota(lead.nota)}, parabéns!`;
-  }
-  return `${pesquisa}.`;
+/** "{N} avaliações com nota {nota}" quando Avaliações ≥ 5 e há Nota; senão null. */
+function avaliacoesComNota(lead: Lead): string | null {
+  if (lead.avaliacoes === null || lead.avaliacoes < 5 || lead.nota === null) return null;
+  const n = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(lead.avaliacoes);
+  return `${n} avaliações com nota ${formatarNota(lead.nota)}`;
 }
 
-/** Nome do cliente no fecho. Sempre "pra {empresa}", sem artigo (não erra o gênero). Sem nome: "vocês". */
-function destinatario(lead: Lead): string {
-  return lead.empresa.trim() || 'vocês';
+/** Fecho da frase da pesquisa: os números (5+ avaliações com nota) ou só o ponto. */
+function elogio(lead: Lead): string {
+  const avaliacoes = avaliacoesComNota(lead);
+  return avaliacoes ? `: ${avaliacoes}, parabéns!` : '.';
+}
+
+/** Trecho da despedida: " mostrando essas {N} avaliações com nota {nota}", ou vazio. */
+function trechoAvaliacoes(lead: Lead): string {
+  const avaliacoes = avaliacoesComNota(lead);
+  return avaliacoes ? ` mostrando essas ${avaliacoes}` : '';
 }
 
 const DESTINOS: Partial<Record<Situacao, string>> = {
@@ -125,24 +164,24 @@ function observacao(situacao: Situacao | null): string {
   return destino ? `Reparei que o botão "Site" de vocês leva ${destino}.` : '';
 }
 
-function primeiraCurta(lead: Lead): string {
-  if (lead.situacao === 'Site amador (construtor grátis)') {
-    return [
-      ABERTURA,
-      '',
-      `${prova(lead)} Dei uma olhada na página de vocês e tenho 2 ou 3 ideias pra ela trazer mais clientes.`,
-      '',
-      `Posso te mandar o que pensei pra ${destinatario(lead)}?`,
-    ].join('\n');
-  }
-  const obs = observacao(lead.situacao);
-  return [
-    ABERTURA,
-    '',
-    obs ? `${prova(lead)} ${obs}` : prova(lead),
-    '',
-    `Posso te mostrar como ficaria uma página pra ${destinatario(lead)}?`,
-  ].join('\n');
+/**
+ * Valor de cada variável para o lead (PRODUCT-SPEC §6). O nome sai sempre como "pra {empresa}",
+ * sem artigo (não erra o gênero); sem nome, "vocês".
+ */
+export function valoresDoLead(lead: Lead): ValoresVariaveis {
+  return {
+    empresa: lead.empresa.trim() || 'vocês',
+    nicho: nichoPlural(lead.nicho),
+    cidade: lead.cidade.trim(),
+    elogio: elogio(lead),
+    observacao: observacao(lead.situacao),
+    avaliacoes: trechoAvaliacoes(lead),
+  };
+}
+
+/** Qual modelo da 1ª mensagem curta vale para o lead. */
+export function chavePrimeira(lead: Lead): ChaveModelo {
+  return lead.situacao === 'Site amador (construtor grátis)' ? 'primeiraSiteAmador' : 'primeiraPadrao';
 }
 
 /** A variante que de fato sai: "completa" sem a coluna Mensagem (texto) cai para "curta". */
@@ -150,6 +189,28 @@ export function varianteEfetiva(lead: Lead, variante: Variante): Variante {
   return variante === 'completa' && lead.mensagemTexto.trim() ? 'completa' : 'curta';
 }
 
-export function primeiraMensagem(lead: Lead, variante: Variante): string {
-  return varianteEfetiva(lead, variante) === 'completa' ? lead.mensagemTexto.trim() : primeiraCurta(lead);
+export function primeiraMensagem(lead: Lead, variante: Variante, modelos: Modelos = {}): string {
+  return varianteEfetiva(lead, variante) === 'completa'
+    ? lead.mensagemTexto.trim()
+    : renderizar(modeloDe(chavePrimeira(lead), modelos), valoresDoLead(lead));
+}
+
+// ---------- Despedida (lead Sem interesse) ----------
+
+export const VERSOES_DESPEDIDA = ['padrão', 'curta', 'avaliações'] as const;
+export type VersaoDespedida = (typeof VERSOES_DESPEDIDA)[number];
+
+const CHAVE_DESPEDIDA: Readonly<Record<VersaoDespedida, ChaveModelo>> = {
+  padrão: 'despedidaPadrao',
+  curta: 'despedidaCurta',
+  avaliações: 'despedidaAvaliacoes',
+};
+
+export function chaveDespedida(versao: VersaoDespedida): ChaveModelo {
+  return CHAVE_DESPEDIDA[versao];
+}
+
+/** Despedida já preenchida com os dados do lead, sempre deixando o link do site. */
+export function despedida(lead: Lead, versao: VersaoDespedida, modelos: Modelos = {}): string {
+  return renderizar(modeloDe(chaveDespedida(versao), modelos), valoresDoLead(lead));
 }

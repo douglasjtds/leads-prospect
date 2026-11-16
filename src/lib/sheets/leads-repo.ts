@@ -1,7 +1,8 @@
 import { planejarImportacao, type Descartado, type LeadNovo, type LinhaBruta } from '@/lib/domain/import';
+import { ehChaveModelo, type ChaveModelo, type Modelos } from '@/lib/domain/templates';
 import type { DataISO, Lead, Patch } from '@/lib/domain/types';
 import { STATUS } from '@/lib/domain/types';
-import { abaConfigurada, sheetsGet, sheetsPost } from './client';
+import { abaConfigurada, ErroPlanilha, sheetsGet, sheetsPost } from './client';
 import {
   COLUNAS,
   COLUNAS_DO_APP,
@@ -241,6 +242,114 @@ export async function importLeads(brutas: readonly LinhaBruta[], { dryRun }: { d
   const plano = planejarImportacao(brutas, await listLeads());
   if (!dryRun) await appendLeads(plano.novos);
   return { inseridos: plano.novos, duplicados: plano.duplicados, ignorados: plano.ignorados };
+}
+
+// ---------- Modelos de mensagem (aba Mensagens) ----------
+
+// Aba própria, com cabeçalho "Chave | Texto" achado pelo nome. Sem linha (ou com Texto vazio)
+// para uma chave, vale o texto padrão do código (lib/domain/messages.ts).
+
+export const ABA_MENSAGENS = 'Mensagens';
+const COL_CHAVE = 'Chave';
+const COL_TEXTO = 'Texto';
+
+interface AbaMensagens {
+  mapa: MapaCabecalho;
+  cabecalho: Celula[];
+  linhas: Celula[][];
+}
+
+function abaInexistente(erro: unknown): boolean {
+  return erro instanceof ErroPlanilha && /unable to parse range/i.test(erro.original);
+}
+
+/** Lê a aba Mensagens inteira; null se a aba ainda não existe. */
+async function lerMensagens(): Promise<AbaMensagens | null> {
+  try {
+    const resposta = await sheetsGet<ValueRange>(`/values/${enc(rangeA1(ABA_MENSAGENS, 'A1:ZZ'))}?valueRenderOption=UNFORMATTED_VALUE`);
+    const [cabecalho = [], ...linhas] = resposta.values ?? [];
+    return { mapa: mapaCabecalho(cabecalho), cabecalho, linhas };
+  } catch (erro) {
+    if (abaInexistente(erro)) return null;
+    throw erro;
+  }
+}
+
+export async function listModelos(): Promise<Modelos> {
+  const aba = await lerMensagens();
+  if (!aba) return {};
+  const iChave = aba.mapa.get(COL_CHAVE);
+  const iTexto = aba.mapa.get(COL_TEXTO);
+  if (iChave === undefined || iTexto === undefined) return {};
+  const modelos: Partial<Record<ChaveModelo, string>> = {};
+  for (const linha of aba.linhas) {
+    const chave = String(linha[iChave] ?? '').trim();
+    const texto = String(linha[iTexto] ?? '');
+    if (ehChaveModelo(chave) && texto.trim() && modelos[chave] === undefined) modelos[chave] = texto;
+  }
+  return modelos;
+}
+
+/** Cria a aba e/ou as colunas Chave e Texto que faltarem. Devolve o estado já com o cabeçalho certo. */
+async function garantirAbaMensagens(): Promise<AbaMensagens> {
+  let aba = await lerMensagens();
+  if (!aba) {
+    await sheetsPost(':batchUpdate', { requests: [{ addSheet: { properties: { title: ABA_MENSAGENS } } }] });
+    aba = { mapa: mapaCabecalho([]), cabecalho: [], linhas: [] };
+  }
+  const faltando = [COL_CHAVE, COL_TEXTO].filter((nome) => !aba.mapa.has(nome));
+  if (faltando.length === 0) return aba;
+
+  const inicio = aba.cabecalho.length;
+  await sheetsPost('/values:batchUpdate', {
+    valueInputOption: 'RAW',
+    data: faltando.map((nome, i) => ({ range: rangeA1(ABA_MENSAGENS, `${letraColuna(inicio + i)}1`), values: [[nome]] })),
+  });
+  const cabecalho = [...aba.cabecalho, ...faltando];
+  return { mapa: mapaCabecalho(cabecalho), cabecalho, linhas: aba.linhas };
+}
+
+/** Linha (1-based) da chave, lida na hora da escrita. Chave repetida é conflito. */
+function linhaDaChave(aba: AbaMensagens, chave: ChaveModelo): number | null {
+  const iChave = indiceColuna(aba.mapa, COL_CHAVE);
+  const achadas = aba.linhas.flatMap((linha, i) => (String(linha[iChave] ?? '').trim() === chave ? [i + 2] : []));
+  if (achadas.length > 1) {
+    throw new ConflitoPlanilha(
+      `A chave "${chave}" aparece em ${achadas.length} linhas da aba ${ABA_MENSAGENS} (${achadas.join(', ')}). Apague as repetidas.`,
+    );
+  }
+  return achadas[0] ?? null;
+}
+
+async function gravarTexto(aba: AbaMensagens, numeroLinha: number, texto: string): Promise<void> {
+  const coluna = letraColuna(indiceColuna(aba.mapa, COL_TEXTO));
+  await sheetsPost('/values:batchUpdate', {
+    valueInputOption: 'RAW',
+    data: [{ range: rangeA1(ABA_MENSAGENS, `${coluna}${numeroLinha}`), values: [[texto]] }],
+  });
+}
+
+/** Grava o modelo para todos os leads (cria a aba na primeira vez). */
+export async function salvarModelo(chave: ChaveModelo, texto: string): Promise<void> {
+  const aba = await garantirAbaMensagens();
+  const numeroLinha = linhaDaChave(aba, chave);
+  if (numeroLinha !== null) {
+    await gravarTexto(aba, numeroLinha, texto);
+    return;
+  }
+  const nova = aba.cabecalho.map((nome) => (nome === COL_CHAVE ? chave : nome === COL_TEXTO ? texto : ''));
+  await sheetsPost(
+    `/values/${enc(rangeA1(ABA_MENSAGENS, 'A1'))}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    { values: [nova] },
+  );
+}
+
+/** Volta ao texto padrão: limpa o Texto da chave (a linha fica, vazia). */
+export async function restaurarModelo(chave: ChaveModelo): Promise<void> {
+  const aba = await lerMensagens();
+  if (!aba || !aba.mapa.has(COL_CHAVE) || !aba.mapa.has(COL_TEXTO)) return;
+  const numeroLinha = linhaDaChave(aba, chave);
+  if (numeroLinha !== null) await gravarTexto(aba, numeroLinha, '');
 }
 
 // ---------- Diagnóstico (check:sheet) ----------

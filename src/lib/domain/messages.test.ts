@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { fazerLead } from './__fixtures__/lead';
 import {
+  despedida,
   formatarNota,
   mensagem,
   nichoPlural,
   primeiraMensagem,
   respostasRapidas,
+  URL_SITE,
   varianteEfetiva,
+  VERSOES_DESPEDIDA,
   type ChaveMensagem,
 } from './messages';
 import { SITUACOES } from './types';
@@ -194,18 +197,22 @@ describe('demais mensagens', () => {
   it('respostas rápidas', () => expect(respostasRapidas()).toMatchInlineSnapshot(`
     [
       {
+        "chave": "rrPreco",
         "rotulo": "Quanto custa?",
         "texto": "O plano essencial começa em R$ 500, tá explicado no site. Se quiser, te digo o que entraria no caso de vocês pra ficar mais claro.",
       },
       {
+        "chave": "rrInstagram",
         "rotulo": "Já tenho Instagram",
         "texto": "Faz sentido, e o Instagram continua sendo a vitrine. A página não substitui, ela complementa: no Instagram a pessoa precisa rolar o feed pra achar endereço, serviços e horários. Na página ela acha tudo em 5 segundos e clica no WhatsApp.",
       },
       {
+        "chave": "rrAgoraNao",
         "rotulo": "Agora não",
         "texto": "Tranquilo! Posso te chamar de novo em janeiro? Começo de ano é quando o pessoal costuma organizar essas coisas.",
       },
       {
+        "chave": "rrLink",
         "rotulo": "Link do site",
         "texto": "https://douglastertuliano.vercel.app/",
       },
@@ -217,10 +224,86 @@ describe('regras de texto', () => {
   it('nenhuma mensagem tem travessão', () => {
     const chaves: ChaveMensagem[] = ['fu3', 'fu7', 'furar', 'cobrarRA', 'site', 'proposta'];
     const textos = [
-      ...chaves.map(mensagem),
+      ...chaves.map((c) => mensagem(c)),
       ...respostasRapidas().flatMap((r) => [r.rotulo, r.texto]),
       ...SITUACOES.map((situacao) => primeiraMensagem(fazerLead({ situacao }), 'curta')),
     ];
     for (const t of textos) expect(t).not.toMatch(/[—–]/);
+  });
+});
+
+describe('despedida', () => {
+  const cainã = fazerLead({ empresa: 'Cainã Nicolletti Personal Trainer', avaliacoes: 37, nota: 5 });
+
+  it('padrão: copy exata, link numa linha própria', () => {
+    expect(despedida(cainã, 'padrão')).toBe(
+      [
+        'Sem problema, obrigado por responder! Vou deixar aqui meu site com alguns exemplos de páginas que já fiz, caso queira dar uma olhada por curiosidade:',
+        URL_SITE,
+        '',
+        'Sem compromisso nenhum. Sucesso pra vocês! 💪',
+      ].join('\n'),
+    );
+  });
+
+  it('curta: copy exata', () => {
+    expect(despedida(cainã, 'curta')).toBe(
+      [
+        'Tranquilo, obrigado pelo retorno! Se um dia quiser ver como ficaria, deixo aqui alguns trabalhos meus:',
+        URL_SITE,
+        '',
+        'Sucesso!',
+      ].join('\n'),
+    );
+  });
+
+  it('avaliações: preenche empresa, número e nota do lead', () => {
+    expect(despedida(cainã, 'avaliações')).toBe(
+      [
+        'Entendo, obrigado por responder! Só deixo aqui meu site com exemplos de páginas, caso queira ver como ficaria uma pra Cainã Nicolletti Personal Trainer mostrando essas 37 avaliações com nota 5,0:',
+        URL_SITE,
+        '',
+        'Sem compromisso, qualquer coisa é só chamar. Abraço!',
+      ].join('\n'),
+    );
+  });
+
+  it('avaliações: milhar com ponto', () => {
+    expect(despedida(fazerLead({ empresa: 'X', avaliacoes: 1234, nota: 4.7 }), 'avaliações')).toContain(
+      'pra X mostrando essas 1.234 avaliações com nota 4,7:',
+    );
+  });
+
+  it('empresa vazia vira "vocês"; espaços nas pontas são aparados', () => {
+    expect(despedida(fazerLead({ empresa: '' }), 'avaliações')).toContain('uma pra vocês mostrando');
+    expect(despedida(fazerLead({ empresa: '  Studio X  ' }), 'avaliações')).toContain('uma pra Studio X mostrando');
+  });
+
+  it.each([
+    ['menos de 5 avaliações', { avaliacoes: 4, nota: 5 }],
+    ['sem nota', { avaliacoes: 30, nota: null }],
+    ['sem avaliações', { avaliacoes: null, nota: 4.9 }],
+  ])('avaliações, %s: sem números', (_, dados) => {
+    const texto = despedida(fazerLead({ empresa: 'Studio X', ...dados }), 'avaliações');
+    expect(texto).toContain('caso queira ver como ficaria uma pra Studio X:\n');
+    expect(texto).not.toContain('avaliações com nota');
+  });
+
+  it('modelo salvo pela tela sai com as variáveis do lead preenchidas', () => {
+    const modelos = { despedidaCurta: 'Valeu, {empresa}{avaliacoes}! {cidade}' };
+    expect(despedida(fazerLead({ empresa: 'Studio X', cidade: 'Londrina', avaliacoes: 12, nota: 4.5 }), 'curta', modelos)).toBe(
+      'Valeu, Studio X mostrando essas 12 avaliações com nota 4,5! Londrina',
+    );
+  });
+
+  it('nenhuma versão deixa variável sem preencher nem travessão', () => {
+    const leads = [cainã, fazerLead({ empresa: '' }), fazerLead({ avaliacoes: null, nota: null })];
+    for (const lead of leads) {
+      for (const versao of VERSOES_DESPEDIDA) {
+        const texto = despedida(lead, versao);
+        expect(texto).not.toMatch(/[{}—–]|undefined|null|NaN/);
+        expect(texto).toContain(`\n${URL_SITE}\n`);
+      }
+    }
   });
 });

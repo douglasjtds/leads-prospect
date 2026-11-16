@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Kicker } from '@/components/ui/kicker';
+import type { UseModelos } from '@/hooks/use-modelos';
 import { formatarNota } from '@/lib/domain/messages';
 import type { Acao, Lead } from '@/lib/domain/types';
 import { urlDm, urlMaps } from '@/lib/whatsapp';
@@ -28,6 +29,8 @@ interface LeadDetailProps {
   /** Enviei aplica e fica no lead; Pular e Revisar aplicam e seguem na fila do Hoje. */
   concluir: (acao: Acao) => void;
   onVoltar: () => void;
+  /** Modelos de mensagem salvos pela tela. */
+  gestor: UseModelos;
   navegacao: NavegacaoDetalhe;
 }
 
@@ -35,7 +38,7 @@ const CLASSE_LINK =
   'rounded-xs text-small text-ink underline decoration-line underline-offset-[0.2em] transition-[text-decoration-color] duration-150 hover:decoration-ink';
 
 /** Detalhe do lead (PRODUCT-SPEC §7.5, DESIGN-GUIDELINES §6). */
-export function LeadDetail({ lead, aplicar, concluir, onVoltar, navegacao }: LeadDetailProps) {
+export function LeadDetail({ lead, aplicar, concluir, onVoltar, gestor, navegacao }: LeadDetailProps) {
   if (!lead) {
     return (
       <div className="flex h-full min-h-60 items-center justify-center px-7 py-6">
@@ -117,12 +120,12 @@ export function LeadDetail({ lead, aplicar, concluir, onVoltar, navegacao }: Lea
         </Bloco>
 
         <Bloco rotulo="próxima ação">
-          <NextAction lead={lead} concluir={concluir} />
+          <NextAction lead={lead} concluir={concluir} gestor={gestor} />
         </Bloco>
 
         {temRespostasRapidas(lead.status) ? (
           <Bloco rotulo="respostas rápidas">
-            <QuickReplies />
+            <QuickReplies lead={lead} gestor={gestor} />
           </Bloco>
         ) : null}
 

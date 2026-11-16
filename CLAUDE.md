@@ -42,7 +42,7 @@ Instruções para o Claude trabalhar no repositório `leads-prospect`.
 - **Sem travessão (em dash) em nenhum texto da interface ou das mensagens.** Use vírgula,
   dois-pontos, parênteses ou frases separadas.
 - Nenhum hex fora de `src/app/globals.css` (tokens). Siga `instructions/DESIGN-GUIDELINES.md`.
-- Textos das mensagens de WhatsApp vêm de `src/lib/domain/messages.ts` e seguem exatamente
+- Textos padrão das mensagens de WhatsApp vêm de `src/lib/domain/messages.ts` e seguem exatamente
   `instructions/PRODUCT-SPEC.md` §6. Não reescreva a copy sem pedir.
 
 ## Validação ao fim de cada fase

@@ -6,14 +6,24 @@ import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
 import { WhatsAppIcon } from '@/components/ui/whatsapp-icon';
 import { useCelular } from '@/hooks/use-celular';
+import type { UseModelos } from '@/hooks/use-modelos';
 import { useAbrirEm, useVariante } from '@/hooks/use-pref';
 import { useShortcuts } from '@/hooks/use-shortcuts';
 import { copiar } from '@/lib/clipboard';
-import { primeiraMensagem, varianteEfetiva } from '@/lib/domain/messages';
+import {
+  chaveDespedida,
+  modeloDe,
+  valoresDoLead,
+  varianteEfetiva,
+  VERSOES_DESPEDIDA,
+  type VersaoDespedida,
+} from '@/lib/domain/messages';
 import { MOTIVOS_PULAR, proximaAcao } from '@/lib/domain/next-action';
+import { renderizar, variaveisDe, type ChaveModelo, type ValoresVariaveis } from '@/lib/domain/templates';
 import { VARIANTES, type Acao, type Lead, type ResultadoRevisao, type Variante } from '@/lib/domain/types';
 import { ABRIR_EM, abrirEmEfetivo, urlChat, urlDm, type AbrirEm } from '@/lib/whatsapp';
 import { CLASSE_TEXTAREA } from './bloco';
+import { ControlesModelo, EditorMensagem } from './editor-mensagem';
 
 // Bloco "próxima ação" (PRODUCT-SPEC §7.5 e §5.2/§5.3, ARCHITECTURE §8).
 
@@ -21,7 +31,11 @@ interface NextActionProps {
   lead: Lead;
   /** Enviei aplica e fica no lead; Pular e Revisar aplicam e avançam na fila do Hoje. */
   concluir: (acao: Acao) => void;
+  gestor: UseModelos;
 }
+
+/** De onde vem o texto da caixa: um modelo (editável para todos) ou a coluna Mensagem (texto). */
+type Fonte = { tipo: 'modelo'; chave: ChaveModelo; modelo: string; valores: ValoresVariaveis } | { tipo: 'texto'; texto: string };
 
 const BOTOES_REVISAR: ReadonlyArray<{ resultado: ResultadoRevisao; rotulo: string }> = [
   { resultado: 'semResposta', rotulo: 'Ainda sem resposta' },
@@ -40,7 +54,7 @@ function abrirDm(url: string): void {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-export function NextAction({ lead, concluir }: NextActionProps) {
+export function NextAction({ lead, concluir, gestor }: NextActionProps) {
   const prox = proximaAcao(lead);
   const [variante, setVariante] = useVariante();
   const [preferencia, setPreferencia] = useAbrirEm();
@@ -49,8 +63,17 @@ export function NextAction({ lead, concluir }: NextActionProps) {
   const chat = urlChat(lead.telefone, abrirEm);
   const dm = urlDm(lead);
 
+  const [versaoDespedida, setVersaoDespedida] = useState<VersaoDespedida>('padrão');
+
   const ehPrimeira = prox.tipo === 'primeira';
-  const texto = ehPrimeira ? primeiraMensagem(lead, variante) : prox.texto;
+  const ehDespedida = prox.tipo === 'despedida';
+  const chave = ehDespedida ? chaveDespedida(versaoDespedida) : prox.chave;
+  // As variáveis do modelo são trocadas pelos valores deste lead antes de copiar (valoresDoLead).
+  const fonte: Fonte | null = !chave
+    ? null
+    : ehPrimeira && varianteEfetiva(lead, variante) === 'completa'
+      ? { tipo: 'texto', texto: lead.mensagemTexto.trim() }
+      : { tipo: 'modelo', chave, modelo: modeloDe(chave, gestor.modelos), valores: valoresDoLead(lead) };
 
   // No celular não há escolha: o WhatsApp Web não abre conversa lá.
   const seletorAbrir = chat && !celular ? (
@@ -67,13 +90,25 @@ export function NextAction({ lead, concluir }: NextActionProps) {
 
       {prox.tipo === 'revisar' ? (
         <Revisar chat={chat} dm={dm} abrirEm={abrirEm} concluir={concluir} seletorAbrir={seletorAbrir} />
-      ) : texto !== undefined ? (
+      ) : fonte ? (
         <ComTexto
-          key={`${lead.placeId}:${prox.tipo}:${ehPrimeira ? variante : ''}`}
-          textoInicial={texto}
+          // Recomeça a caixa ao trocar de lead, de variante ou quando o modelo salvo muda.
+          key={`${lead.placeId}:${prox.tipo}:${ehPrimeira ? variante : ''}:${chave ?? ''}:${fonte.tipo === 'modelo' ? fonte.modelo : ''}`}
+          fonte={fonte}
+          gestor={gestor}
           variante={ehPrimeira ? variante : null}
           setVariante={setVariante}
           semCompleta={ehPrimeira && variante === 'completa' && varianteEfetiva(lead, 'completa') === 'curta'}
+          seletorDespedida={
+            ehDespedida ? (
+              <Segmented
+                label="Versão da despedida"
+                options={VERSOES_DESPEDIDA}
+                value={versaoDespedida}
+                onChange={setVersaoDespedida}
+              />
+            ) : null
+          }
           podePular={lead.status === 'A contatar'}
           chat={chat}
           dm={dm}
@@ -90,11 +125,14 @@ export function NextAction({ lead, concluir }: NextActionProps) {
 }
 
 interface ComTextoProps {
-  textoInicial: string;
+  fonte: Fonte;
+  gestor: UseModelos;
   /** Só na 1ª mensagem; null nas demais. */
   variante: Variante | null;
   setVariante: (v: Variante) => void;
   semCompleta: boolean;
+  /** Seletor das versões da despedida (lead Sem interesse); null nas demais. */
+  seletorDespedida: ReactNode;
   podePular: boolean;
   chat: string | null;
   dm: string | null;
@@ -106,10 +144,12 @@ interface ComTextoProps {
 }
 
 function ComTexto({
-  textoInicial,
+  fonte,
+  gestor,
   variante,
   setVariante,
   semCompleta,
+  seletorDespedida,
   podePular,
   chat,
   dm,
@@ -118,7 +158,9 @@ function ComTexto({
   concluir,
   seletorAbrir,
 }: ComTextoProps) {
-  const [texto, setTexto] = useState(textoInicial);
+  // Modelo (com {variaveis}) quando a fonte é modelo; texto puro quando é a coluna Mensagem (texto).
+  const [conteudo, setConteudo] = useState(fonte.tipo === 'modelo' ? fonte.modelo : fonte.texto);
+  const texto = fonte.tipo === 'modelo' ? renderizar(conteudo, fonte.valores) : conteudo;
 
   async function copiarEAbrir() {
     if (!(await copiar(texto))) {
@@ -150,16 +192,35 @@ function ComTexto({
           ) : null}
         </div>
       ) : null}
+      {seletorDespedida ? <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">{seletorDespedida}</div> : null}
 
-      <label htmlFor="mensagem" className="sr-only">
-        Mensagem
-      </label>
-      <textarea
-        id="mensagem"
-        value={texto}
-        onChange={(evento) => setTexto(evento.target.value)}
-        className={`${CLASSE_TEXTAREA} min-h-28 field-sizing-content`}
-      />
+      {fonte.tipo === 'modelo' ? (
+        <>
+          <EditorMensagem
+            id="mensagem"
+            rotulo="Mensagem"
+            modeloInicial={fonte.modelo}
+            valores={fonte.valores}
+            onModelo={setConteudo}
+          />
+          {variaveisDe(fonte.modelo).length > 0 ? (
+            <p className="mt-1.5 text-label text-ink-muted">Trechos destacados mudam a cada lead.</p>
+          ) : null}
+          <ControlesModelo chave={fonte.chave} modelo={conteudo} valores={fonte.valores} gestor={gestor} />
+        </>
+      ) : (
+        <>
+          <label htmlFor="mensagem" className="sr-only">
+            Mensagem
+          </label>
+          <textarea
+            id="mensagem"
+            value={conteudo}
+            onChange={(evento) => setConteudo(evento.target.value)}
+            className={`${CLASSE_TEXTAREA} min-h-28 field-sizing-content`}
+          />
+        </>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {chat ? (

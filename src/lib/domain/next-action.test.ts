@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { fazerLead } from './__fixtures__/lead';
-import { mensagem, primeiraMensagem } from './messages';
 import { AcaoInvalida, aplicarAcao, aplicarPatch, proximaAcao, temContato } from './next-action';
 import { STATUS, type Status } from './types';
 
@@ -11,7 +10,7 @@ describe('§5.2 máquina de próxima ação', () => {
     const lead = fazerLead();
     const prox = proximaAcao(lead);
     expect(prox.tipo).toBe('primeira');
-    expect(prox.texto).toBe(primeiraMensagem(lead, 'curta'));
+    expect(prox.chave).toBe('primeiraPadrao');
     expect(prox.sub).toContain('WhatsApp');
     expect(aplicarAcao(lead, { tipo: 'enviei', variante: 'curta' }, HOJE)).toEqual({
       status: 'Contatado',
@@ -57,13 +56,13 @@ describe('§5.2 máquina de próxima ação', () => {
   it('Contatado, Toques 0: Revisar, sem mensagem, Enviei inválido', () => {
     const lead = fazerLead({ status: 'Contatado', toques: 0 });
     expect(proximaAcao(lead)).toMatchObject({ tipo: 'revisar', titulo: 'Revisar' });
-    expect(proximaAcao(lead).texto).toBeUndefined();
+    expect(proximaAcao(lead).chave).toBeUndefined();
     expect(() => aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toThrow(AcaoInvalida);
   });
 
   it('Contatado, Toques 1: Follow-up dia 3; Enviei → Toques 2, +4, histórico', () => {
     const lead = fazerLead({ status: 'Contatado', toques: 1 });
-    expect(proximaAcao(lead)).toMatchObject({ tipo: 'fu3', titulo: 'Follow-up dia 3', texto: mensagem('fu3') });
+    expect(proximaAcao(lead)).toMatchObject({ tipo: 'fu3', titulo: 'Follow-up dia 3', chave: 'fu3' });
     expect(aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toEqual({
       toques: 2,
       proxAcao: '2026-11-17',
@@ -73,7 +72,7 @@ describe('§5.2 máquina de próxima ação', () => {
 
   it('Contatado, Toques 2: Follow-up final; Enviei → Toques 3, Próx. ação vazia, histórico', () => {
     const lead = fazerLead({ status: 'Contatado', toques: 2 });
-    expect(proximaAcao(lead)).toMatchObject({ tipo: 'fu7', titulo: 'Follow-up final', texto: mensagem('fu7') });
+    expect(proximaAcao(lead)).toMatchObject({ tipo: 'fu7', titulo: 'Follow-up final', chave: 'fu7' });
     expect(aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toEqual({
       toques: 3,
       proxAcao: null,
@@ -91,7 +90,7 @@ describe('§5.2 máquina de próxima ação', () => {
 
   it('Resposta automática sem "furou fila": Furar; Enviei → Toques +1, +2, histórico', () => {
     const lead = fazerLead({ status: 'Resposta automática', toques: 1, historico: '01/11 1ª msg (curta)' });
-    expect(proximaAcao(lead)).toMatchObject({ tipo: 'furar', texto: mensagem('furar') });
+    expect(proximaAcao(lead)).toMatchObject({ tipo: 'furar', chave: 'furar' });
     expect(aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toEqual({
       toques: 2,
       proxAcao: '2026-11-15',
@@ -101,7 +100,7 @@ describe('§5.2 máquina de próxima ação', () => {
 
   it('Resposta automática com "furou fila" e sem "cobrou resposta": Cobrar retorno; Enviei → Toques +1, vazia', () => {
     const lead = fazerLead({ status: 'Resposta automática', toques: 2, historico: '01/11 1ª msg (curta) · 05/11 furou fila' });
-    expect(proximaAcao(lead)).toMatchObject({ tipo: 'cobrarRA', titulo: 'Cobrar retorno', texto: mensagem('cobrarRA') });
+    expect(proximaAcao(lead)).toMatchObject({ tipo: 'cobrarRA', titulo: 'Cobrar retorno', chave: 'cobrarRA' });
     expect(aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toEqual({
       toques: 3,
       proxAcao: null,
@@ -117,27 +116,50 @@ describe('§5.2 máquina de próxima ação', () => {
 
   it.each<Status>(['Respondeu', 'Reunião marcada'])('%s sem "enviou site": Mandar o site; Enviei → +2, histórico', (status) => {
     const lead = fazerLead({ status, toques: 1 });
-    expect(proximaAcao(lead)).toMatchObject({ tipo: 'site', titulo: 'Mandar o site', texto: mensagem('site') });
+    expect(proximaAcao(lead)).toMatchObject({ tipo: 'site', titulo: 'Mandar o site', chave: 'site' });
     expect(aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toEqual({ proxAcao: '2026-11-15', eventoHistorico: 'enviou site' });
   });
 
   it.each<Status>(['Respondeu', 'Reunião marcada'])('%s com site enviado: Em conversa, Enviei inválido', (status) => {
     const lead = fazerLead({ status, historico: '10/11 enviou site' });
     expect(proximaAcao(lead)).toMatchObject({ tipo: 'emConversa', titulo: 'Em conversa' });
-    expect(proximaAcao(lead).texto).toBeUndefined();
+    expect(proximaAcao(lead).chave).toBeUndefined();
     expect(() => aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toThrow(AcaoInvalida);
   });
 
   it('Proposta enviada: Cobrar a proposta; Enviei → +3, histórico', () => {
     const lead = fazerLead({ status: 'Proposta enviada' });
-    expect(proximaAcao(lead)).toMatchObject({ tipo: 'proposta', titulo: 'Cobrar a proposta', texto: mensagem('proposta') });
+    expect(proximaAcao(lead)).toMatchObject({ tipo: 'proposta', titulo: 'Cobrar a proposta', chave: 'proposta' });
     expect(aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toEqual({ proxAcao: '2026-11-16', eventoHistorico: 'cobrou proposta' });
   });
 
-  it.each<Status>(['Fechado', 'Sem interesse'])('%s: nenhuma ação, Enviei inválido', (status) => {
-    const lead = fazerLead({ status });
+  it.each([
+    ['Fechado', ''],
+    ['Sem interesse pulado', '13/11 pulado: outro'],
+    ['Sem interesse pulado e remarcado', '13/11 pulado: outro · 14/11 status → Sem interesse'],
+    ['Sem interesse com despedida enviada', '13/11 status → Sem interesse · 14/11 enviou despedida'],
+  ])('%s: nenhuma ação, Enviei inválido', (caso, historico) => {
+    const lead = fazerLead({ status: caso === 'Fechado' ? 'Fechado' : 'Sem interesse', historico });
     expect(proximaAcao(lead).tipo).toBe('nenhuma');
     expect(() => aplicarAcao(lead, { tipo: 'enviei' }, HOJE)).toThrow(AcaoInvalida);
+  });
+
+  it.each(['13/11 status → Sem interesse', '13/11 revisado: sem interesse', ''])(
+    'Sem interesse que conversou (%s): Mensagem de despedida',
+    (historico) => {
+      const lead = fazerLead({ status: 'Sem interesse', historico });
+      expect(proximaAcao(lead)).toEqual({
+        tipo: 'despedida',
+        titulo: 'Mensagem de despedida',
+        sub: 'Encerre com educação e deixe o link do site.',
+        chave: 'despedidaPadrao',
+      });
+    },
+  );
+
+  it('Enviei na despedida só grava o evento, mesmo com variante vinda do cliente', () => {
+    const lead = fazerLead({ status: 'Sem interesse', toques: 2, historico: '13/11 status → Sem interesse' });
+    expect(aplicarAcao(lead, { tipo: 'enviei', variante: 'completa' }, HOJE)).toEqual({ eventoHistorico: 'enviou despedida' });
   });
 
   it('Enviei num lead que já mudou de status lança AcaoInvalida com mensagem', () => {
